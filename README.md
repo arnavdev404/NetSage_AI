@@ -16,13 +16,13 @@ A human reviewer can accept, edit, or reject the generated diagnosis before it b
 
 ### Try NetSage AI
 
-**🌎 [Open the Live Website](https://netsage-ai-arnav.netlify.app/)**
+** [Open the Live Website](https://netsage-ai-arnav.netlify.app/)**
 
 The frontend is currently hosted on **Netlify**.
 
 ---
 
-## 💡 Why NetSage AI?
+##  Why NetSage AI?
 
 Troubleshooting a Cisco Packet Tracer network is often less about knowing one command and more about connecting several pieces of information.
 
@@ -43,7 +43,7 @@ The goal is not to replace the network engineer.
 
 ---
 
-# 🔍 How It Works
+#  How It Works
 
 ```text
              👤 User
@@ -71,11 +71,11 @@ The goal is not to replace the network engineer.
               + Fix
                  │
                  ▼
-        👨‍💻 Human Review
+          Human Review
                  │
        ┌─────────┼─────────┐
        ▼         ▼         ▼
-    ✅ Accept   ✏️ Edit   ❌ Reject
+    ✅ Accept   Edit   ❌ Reject
        │         │         │
        └─────────┼─────────┘
                  ▼
@@ -86,11 +86,11 @@ The goal is not to replace the network engineer.
 
 # ✨ Features
 
-### 🧠 AI-Assisted Diagnosis
+###  AI-Assisted Diagnosis
 
 Uses Google Gemini to analyze the provided network information and generate a possible diagnosis with explanation and suggested remediation.
 
-### 🐍 Deterministic Python Rules
+###  Deterministic Python Rules
 
 Known Cisco troubleshooting conditions are checked using predefined Python logic and regular expressions.
 
@@ -108,11 +108,11 @@ Every generated diagnosis can be reviewed by a person.
 
 The dashboard provides a quick overview of diagnostic activity, including review outcomes and case distribution.
 
-### 🧪 30 Troubleshooting Cases
+###  30 Troubleshooting Cases
 
 The project includes **30 predefined Cisco Packet Tracer troubleshooting scenarios** that can be used to test and demonstrate the system.
 
-### 🔌 REST API
+### REST API
 
 The backend exposes REST API endpoints through FastAPI, making the diagnosis and review workflow easy to integrate with the frontend.
 
@@ -206,7 +206,7 @@ Before running NetSage AI locally, make sure you have:
 
 ---
 
-## 1️⃣ Clone the Repository
+##  Clone the Repository
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/NetSage_AI.git
@@ -215,7 +215,7 @@ cd NetSage_AI
 
 ---
 
-## 2️⃣ Install Dependencies
+##  Install Dependencies
 
 ```bash
 cd backend
@@ -224,7 +224,7 @@ pip install -r requirements.txt
 
 ---
 
-## 3️⃣ Configure Gemini
+##  Configure Gemini
 
 Set your Gemini API key in the AI configuration.
 
@@ -236,7 +236,7 @@ genai.configure(
 )
 ```
 
-### 🔐 Important
+### Important
 
 For real deployments, **do not commit your API key to GitHub**.
 
@@ -244,7 +244,7 @@ Use environment variables or another secure secret-management approach instead.
 
 ---
 
-## 4️⃣ Start the Backend
+## Start the Backend
 
 From the `backend` directory:
 
@@ -260,7 +260,7 @@ http://localhost:8000
 
 ---
 
-## 5️⃣ Open the Frontend
+## Open the Frontend
 
 Open:
 
@@ -272,7 +272,7 @@ in your browser and make sure the frontend is configured to use the correct back
 
 ---
 
-# 🔌 API Endpoints
+# API Endpoints
 
 | Method | Endpoint        | Description                               |
 | ------ | --------------- | ----------------------------------------- |
@@ -328,7 +328,7 @@ That makes the project especially useful for experimenting with **responsible AI
 
 ---
 
-# 🧪 Troubleshooting Dataset
+# Troubleshooting Dataset
 
 NetSage AI currently contains **30 Cisco Packet Tracer troubleshooting scenarios**.
 
@@ -344,7 +344,7 @@ They also provide a consistent set of examples for demonstrating how the rule en
 
 ---
 
-# 🚀 Deployment
+# Deployment
 
 The frontend is currently deployed on Netlify:
 
@@ -362,7 +362,7 @@ Also make sure your Gemini API key is stored securely on the backend.
 
 ---
 
-# 🧭 Future Improvements
+#  Future Improvements
 
 NetSage AI is still an evolving project.
 
@@ -380,7 +380,7 @@ Some improvements planned for future versions include:
 
 ---
 
-# 🎯 Project Goal
+#  Project Goal
 
 NetSage AI was created to explore a simple question:
 
@@ -394,7 +394,7 @@ It is an experiment in building a **practical, explainable, and human-reviewed A
 
 ---
 
-# 📜 License
+#  License
 
 This project is created for **educational and demonstration purposes**.
 
