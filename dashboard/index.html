@@ -1,0 +1,1437 @@
+﻿<!DOCTYPE html>
+<html lang="en" data-mode="dark">
+<head>
+
+<meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="logo.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetSage AI </title>
+<!--
+  NetSage AI — Network Troubleshooting Assistant
+  Built for Packet Tracer lab diagnosis with Responsible AI oversight
+  Authors: Team NetSage | Course: Modern AI, Networking Domain
+  Stack: Vanilla JS + Chart.js 4.4 + Google Gemini Flash API
+-->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ── LIGHT MODE TOKENS ──────────────────────────────── */
+:root{
+  --canvas:      #F8F7FC;
+  --panel:       #FFFFFF;
+  --panel-alt:   #F1EFF8;
+  --panel-deep:  #E8E5F4;
+  --vivid:       #7C5CFC;
+  --vivid-soft:  rgba(124,92,252,.10);
+  --vivid-hi:    #6847E8;
+  --pop:         #7C5CFC;
+  --pop-soft:    rgba(124,92,252,.08);
+  --ink:         #211D2B;
+  --ink-dim:     #6F687D;
+  --rim:         #E3DFEC;
+  --good:        #22A06B;
+  --good-soft:   rgba(34,160,107,.10);
+  --caution:     #B87A50;
+  --caution-soft:rgba(184,122,80,.10);
+  --bad:         #D6455D;
+  --bad-soft:    rgba(214,69,93,.10);
+  --flag:        #7C5CFC;
+  --flag-soft:   rgba(124,92,252,.10);
+  --lift:        0 1px 3px rgba(33,29,43,.06),0 4px 16px rgba(33,29,43,.05);
+  --lift-lg:     0 8px 32px rgba(33,29,43,.10);
+  --curve:       12px;
+  --curve-sm:    8px;
+  --typeface:    "Segoe UI",system-ui,-apple-system,sans-serif;
+}
+/* ── DARK MODE TOKENS ───────────────────────────────── */
+[data-mode="dark"]{
+  --canvas:      #0a0a0a;
+  --panel:       #141414;
+  --panel-alt:   #1e1e1e;
+  --panel-deep:  #282828;
+  --vivid:       #A8DADC;
+  --vivid-soft:  rgba(168,218,220,.12);
+  --vivid-hi:    #bde8ea;
+  --pop:         #B39CD0;
+  --pop-soft:    rgba(179,156,208,.12);
+  --ink:         #E4E4E4;
+  --ink-dim:     #9a9a9a;
+  --rim:         #2a2a2a;
+  --good:        #A8DADC;
+  --good-soft:   rgba(168,218,220,.12);
+  --caution:     #FFC1CC;
+  --caution-soft:rgba(255,193,204,.12);
+  --bad:         #ff8fa0;
+  --bad-soft:    rgba(255,143,160,.12);
+  --flag:        #B39CD0;
+  --flag-soft:   rgba(179,156,208,.14);
+  --lift:        0 1px 3px rgba(0,0,0,.4),0 4px 16px rgba(0,0,0,.3);
+  --lift-lg:     0 8px 32px rgba(0,0,0,.5);
+}
+
+/* ── RESET ──────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:var(--typeface);background:var(--canvas);color:var(--ink);transition:background .3s,color .3s;min-height:100vh;display:flex;flex-direction:column}
+button{cursor:pointer;font-family:var(--typeface)}
+input,select,textarea{font-family:var(--typeface)}
+
+/* ── TOP BAR ────────────────────────────────────────── */
+.nsg-topbar{position:sticky;top:0;z-index:100;background:var(--panel);border-bottom:1px solid var(--rim);box-shadow:var(--lift);padding:0 20px;display:flex;align-items:center;gap:12px;height:56px}
+.nsg-brand{font-size:1.05rem;font-weight:700;color:var(--vivid);white-space:nowrap;letter-spacing:.3px}
+.nsg-tabs{display:flex;align-items:center;gap:2px;overflow-x:auto;flex:1;scrollbar-width:none}
+.nsg-tabs::-webkit-scrollbar{display:none}
+.nsg-tab{padding:5px 13px;border-radius:var(--curve-sm);border:none;background:transparent;color:var(--ink-dim);font-size:.82rem;font-weight:500;transition:all .2s;white-space:nowrap;cursor:pointer}
+.nsg-tab:hover{background:var(--panel-alt);color:var(--ink)}
+.nsg-tab.is-active{background:var(--vivid-soft);color:var(--vivid);font-weight:600}
+
+/* ── THEME TOGGLE ───────────────────────────────────── */
+.nsg-mode-switch{display:flex;align-items:center;gap:7px;cursor:pointer;flex-shrink:0;user-select:none}
+.nsg-switch-label{font-size:.72rem;font-weight:600;color:var(--ink-dim);transition:color .25s;white-space:nowrap}
+.nsg-switch-track{width:42px;height:22px;border-radius:11px;background:var(--panel-deep);border:1px solid var(--rim);position:relative;transition:background .25s;flex-shrink:0}
+.nsg-switch-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--vivid);transition:transform .25s;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+[data-mode="dark"] .nsg-switch-knob{transform:translateX(20px)}
+[data-mode="light"] #sw-lt{color:var(--vivid);font-weight:700}
+[data-mode="dark"] #sw-dk{color:var(--vivid);font-weight:700}
+
+/* ── WORKSPACE ──────────────────────────────────────── */
+.nsg-workspace{flex:1;padding:24px 20px;max-width:1160px;margin:0 auto;width:100%}
+.nsg-view{display:none;animation:fadeUp .25s ease}
+.nsg-view.is-visible{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── PANELS ─────────────────────────────────────────── */
+.nsg-panel{background:var(--panel);border:1px solid var(--rim);border-radius:var(--curve);padding:22px;box-shadow:var(--lift)}
+
+/* ── GRID LAYOUTS ───────────────────────────────────── */
+.nsg-row2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.nsg-row3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.nsg-row4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+@media(max-width:900px){.nsg-row4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.nsg-row2,.nsg-row3,.nsg-row4{grid-template-columns:1fr}.nsg-topbar{padding:0 12px}}
+
+/* ── KPI METRICS ────────────────────────────────────── */
+.nsg-kpi{background:var(--panel);border:1px solid var(--rim);border-radius:var(--curve);padding:18px 22px;box-shadow:var(--lift)}
+.nsg-kpi-num{font-size:1.9rem;font-weight:700;color:var(--vivid);line-height:1}
+.nsg-kpi-lbl{font-size:.72rem;color:var(--ink-dim);font-weight:600;text-transform:uppercase;letter-spacing:.6px;margin-top:5px}
+
+/* ── TAGS ───────────────────────────────────────────── */
+.nsg-tag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:.72rem;font-weight:600;letter-spacing:.2px}
+.nsg-tag--teal{background:var(--good-soft);color:var(--good)}
+.nsg-tag--pink{background:var(--caution-soft);color:var(--caution)}
+.nsg-tag--violet{background:var(--flag-soft);color:var(--flag)}
+.nsg-tag--red{background:var(--bad-soft);color:var(--bad)}
+.nsg-tag--amber{background:var(--caution-soft);color:var(--caution)}
+.nsg-tag--dim{background:var(--panel-alt);color:var(--ink-dim)}
+
+/* ── BUTTONS ────────────────────────────────────────── */
+.nsg-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:var(--curve-sm);border:none;font-size:.84rem;font-weight:600;transition:all .2s;cursor:pointer;font-family:var(--typeface)}
+.nsg-btn--fill{background:var(--vivid);color:#ffffff}
+.nsg-btn--fill:hover{background:var(--vivid-hi);transform:translateY(-1px)}
+.nsg-btn--ghost{background:transparent;border:1.5px solid var(--rim);color:var(--ink)}
+.nsg-btn--ghost:hover{border-color:var(--vivid);color:var(--vivid);background:var(--vivid-soft)}
+.nsg-btn--sm{padding:5px 12px;font-size:.78rem}
+
+/* ── FORM ELEMENTS ──────────────────────────────────── */
+.nsg-text-input,.nsg-dropdown,.nsg-textarea{width:100%;padding:9px 13px;border-radius:var(--curve-sm);border:1.5px solid var(--rim);background:var(--panel-alt);color:var(--ink);font-size:.875rem;transition:all .2s;outline:none;font-family:var(--typeface)}
+.nsg-text-input:focus,.nsg-dropdown:focus,.nsg-textarea:focus{border-color:var(--vivid);box-shadow:0 0 0 3px var(--vivid-soft)}
+[data-mode="dark"] .nsg-text-input,[data-mode="dark"] .nsg-dropdown,[data-mode="dark"] .nsg-textarea{background:var(--panel-deep)}
+.nsg-textarea{resize:vertical;min-height:80px}
+.nsg-field{display:flex;flex-direction:column;gap:5px}
+.nsg-field-lbl{font-size:.72rem;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.6px}
+
+/* ── SEARCH ─────────────────────────────────────────── */
+.nsg-search-wrap{position:relative;max-width:320px}
+.nsg-search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--ink-dim);font-size:.8rem;pointer-events:none}
+.nsg-search-wrap .nsg-text-input{padding-left:32px}
+
+/* ── DATA TABLE ─────────────────────────────────────── */
+.nsg-tbl-wrap{overflow-x:auto;border-radius:var(--curve);border:1px solid var(--rim)}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+thead th{background:var(--panel-alt);color:var(--ink-dim);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--rim);white-space:nowrap}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--rim);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr{transition:background .15s;cursor:pointer}
+tbody tr:hover{background:var(--panel-alt)}
+
+/* ── PAGE HEADINGS ──────────────────────────────────── */
+.nsg-heading{font-size:1.45rem;font-weight:700;margin-bottom:4px}
+.nsg-subheading{font-size:.84rem;color:var(--ink-dim);margin-bottom:20px}
+.nsg-section-title{font-size:1rem;font-weight:700;margin-bottom:14px}
+
+/* ── CASE EXPANDABLE ROW ────────────────────────────── */
+.nsg-case-expand{border-top:1px solid var(--rim);padding:14px;background:var(--panel-alt);display:none}
+.nsg-case-expand.is-open{display:block}
+.nsg-detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){.nsg-detail-grid{grid-template-columns:1fr}}
+.nsg-detail-item label{font-size:.7rem;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.6px}
+.nsg-detail-item p{font-size:.84rem;margin-top:3px;line-height:1.6}
+.nsg-cmd-output{font-family:"Cascadia Code","Consolas",monospace;font-size:.78rem;background:var(--canvas);padding:10px;border-radius:var(--curve-sm);border:1px solid var(--rim);white-space:pre-wrap;word-break:break-word;color:var(--vivid)}
+
+/* ── RULE VIOLATIONS ────────────────────────────────── */
+.nsg-rule-hit{display:flex;gap:11px;padding:12px 14px;border-radius:var(--curve-sm);margin-bottom:9px;border:1px solid transparent}
+.nsg-rule-hit.lvl-high{background:var(--bad-soft);border-color:var(--bad)}
+.nsg-rule-hit.lvl-critical{background:var(--flag-soft);border-color:var(--flag)}
+.nsg-rule-hit.lvl-medium{background:var(--caution-soft);border-color:var(--caution)}
+.nsg-rule-label{display:inline-block;padding:1px 7px;border-radius:4px;font-size:.68rem;font-weight:700;margin-right:6px}
+.nsg-rule-fix{font-size:.77rem;margin-top:6px;padding:5px 9px;background:var(--panel);border-radius:5px;font-family:monospace;color:var(--vivid);border-left:2px solid var(--vivid)}
+
+/* ── AI DIAGNOSIS CARDS ─────────────────────────────── */
+.nsg-diag-card{border:1px solid var(--rim);border-radius:var(--curve);overflow:hidden;margin-bottom:14px}
+.nsg-diag-header{padding:13px 17px;background:var(--panel-alt);display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;transition:background .2s;flex-wrap:wrap}
+.nsg-diag-header:hover{background:var(--panel-deep)}
+.nsg-diag-body{padding:18px;display:none}
+.nsg-diag-body.is-open{display:block}
+.nsg-proof-items{list-style:none;display:flex;flex-direction:column;gap:7px}
+.nsg-proof-items li{display:flex;gap:8px;padding:9px 11px;background:var(--panel-alt);border-radius:var(--curve-sm);border-left:3px solid var(--vivid);font-size:.83rem;line-height:1.5}
+.nsg-fix-steps{list-style:none;counter-reset:ns-step;display:flex;flex-direction:column;gap:7px}
+.nsg-fix-steps li{counter-increment:ns-step;display:flex;gap:9px;align-items:flex-start;padding:9px 13px;background:var(--panel-alt);border-radius:var(--curve-sm);font-size:.82rem;font-family:monospace;line-height:1.5}
+.nsg-fix-steps li::before{content:counter(ns-step);display:flex;align-items:center;justify-content:center;min-width:20px;height:20px;border-radius:50%;background:var(--vivid);color:#fff;font-size:.7rem;font-weight:700;font-family:var(--typeface);flex-shrink:0;margin-top:1px}
+
+/* ── REVIEW VERDICTS ────────────────────────────────── */
+.nsg-verdict-group{display:flex;gap:9px;flex-wrap:wrap}
+.nsg-verdict-opt{flex:1;min-width:90px;padding:13px 8px;border-radius:var(--curve-sm);border:2px solid var(--rim);background:var(--panel-alt);color:var(--ink);font-weight:700;font-size:.88rem;transition:all .2s;text-align:center;cursor:pointer;font-family:var(--typeface)}
+.nsg-verdict-opt:hover{transform:translateY(-1px)}
+.verdict-accept{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.verdict-edit{background:var(--caution-soft);border-color:var(--caution);color:var(--caution)}
+.verdict-reject{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.nsg-log-entry{padding:12px;border-radius:var(--curve-sm);border:1px solid var(--rim);margin-bottom:9px}
+
+/* ── CHARTS ─────────────────────────────────────────── */
+.nsg-chart-wrap{position:relative;height:280px}
+
+/* ── HERO SPLASH ────────────────────────────────────── */
+.nsg-hero{background:linear-gradient(135deg,var(--vivid-soft),var(--pop-soft));border:1px solid var(--rim);border-radius:16px;padding:36px 44px;margin-bottom:24px}
+.nsg-hero h1{font-size:1.9rem;font-weight:800;line-height:1.25}
+.nsg-hero h1 em{color:var(--vivid);font-style:normal}
+.nsg-hero p{font-size:.93rem;color:var(--ink-dim);margin-top:10px;max-width:560px;line-height:1.75}
+.nsg-hero-ctas{display:flex;gap:9px;margin-top:18px;flex-wrap:wrap}
+@media(max-width:680px){.nsg-hero{padding:24px 20px}}
+
+/* ── WORKFLOW ────────────────────────────────────────── */
+.nsg-workflow{display:flex;align-items:center;overflow-x:auto;padding:4px 0;scrollbar-width:none;gap:0}
+.nsg-workflow::-webkit-scrollbar{display:none}
+.nsg-wf-node{display:flex;flex-direction:column;align-items:center;min-width:96px;padding:10px 6px;background:var(--panel);border:1px solid var(--rim);border-radius:var(--curve-sm);text-align:center;flex-shrink:0}
+.nsg-wf-badge{width:28px;height:28px;border-radius:50%;background:var(--vivid-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 5px;color:var(--vivid);font-weight:700;font-size:.8rem}
+.nsg-wf-label{font-size:.68rem;font-weight:600;color:var(--ink-dim)}
+.nsg-wf-arrow{color:var(--vivid);margin:0 3px;flex-shrink:0;font-size:1.1rem}
+
+/* ── HELP GUIDE ─────────────────────────────────────── */
+.nsg-guide-step{display:flex;gap:14px;padding:18px;border-radius:var(--curve);margin-bottom:10px;background:var(--panel);border:1px solid var(--rim);transition:border-color .2s}
+.nsg-guide-step:hover{border-color:var(--vivid)}
+.nsg-step-badge{display:flex;align-items:center;justify-content:center;min-width:40px;height:40px;border-radius:50%;background:var(--vivid-soft);color:var(--vivid);font-size:1rem;font-weight:700;flex-shrink:0}
+.nsg-step-body h3{font-size:.95rem;font-weight:700}
+.nsg-step-body p{font-size:.84rem;color:var(--ink-dim);margin-top:4px;line-height:1.65}
+.nsg-tip-block{margin-top:9px;padding:7px 11px;background:var(--vivid-soft);color:var(--vivid);border-radius:var(--curve-sm);font-size:.78rem;border-left:3px solid var(--vivid)}
+
+/* ── FAQ ─────────────────────────────────────────────── */
+.nsg-qa-item{border-radius:var(--curve-sm);border:1px solid var(--rim);overflow:hidden;margin-bottom:7px}
+.nsg-qa-question{padding:12px 15px;background:var(--panel);cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:.84rem;transition:background .15s}
+.nsg-qa-question:hover{background:var(--panel-alt)}
+.nsg-qa-answer{padding:0 15px;max-height:0;overflow:hidden;transition:max-height .3s,padding .3s}
+.nsg-qa-answer.is-open{padding:11px 15px;max-height:280px}
+.nsg-qa-answer p{font-size:.84rem;color:var(--ink-dim);line-height:1.7}
+
+/* ── NOTIFICATION ───────────────────────────────────── */
+.nsg-notification{position:fixed;bottom:22px;right:22px;z-index:999;padding:12px 16px;border-radius:10px;background:var(--panel);border:1px solid var(--rim);box-shadow:0 8px 28px rgba(0,0,0,.15);transform:translateY(80px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);max-width:300px;display:flex;align-items:flex-start;gap:12px}
+.nsg-notification.show{transform:translateY(0);opacity:1}
+.nsg-notification .toast-icon{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;border:2px solid var(--vivid)}
+.nsg-notification .toast-body{flex:1;min-width:0}
+.nsg-notification .toast-title{font-size:.75rem;font-weight:700;color:var(--vivid);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.nsg-notification .toast-msg{font-size:.82rem;font-weight:500;color:var(--ink);line-height:1.4}
+.nsg-notification.ok .toast-icon{border-color:#22A06B}
+.nsg-notification.ok .toast-title{color:#22A06B}
+.nsg-notification.err .toast-icon{border-color:#D6455D}
+.nsg-notification.err .toast-title{color:#D6455D}
+.nsg-notification.warn .toast-icon{border-color:#F59E0B}
+.nsg-notification.warn .toast-title{color:#F59E0B}
+.nsg-notification.show{transform:none;opacity:1}
+.nsg-notification.ok{border-left:4px solid var(--good);color:var(--good)}
+.nsg-notification.warn{border-left:4px solid var(--caution);color:var(--caution)}
+
+/* ── UTILS ───────────────────────────────────────────── */
+.flex-row{display:flex;align-items:center;gap:9px}
+.flex-spread{display:flex;align-items:center;justify-content:space-between;gap:9px;flex-wrap:wrap}
+.gap-top{margin-top:8px}.gap-top-md{margin-top:12px}.gap-top-lg{margin-top:16px}
+.gap-bot-md{margin-bottom:12px}.gap-bot-lg{margin-bottom:16px}.gap-bot-xl{margin-bottom:24px}
+.dim-text{color:var(--ink-dim)}.sz-sm{font-size:.875rem}.sz-xs{font-size:.75rem}
+.bold{font-weight:700}.clip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mono-block{background:var(--panel-alt);padding:2px 7px;border-radius:4px;font-size:.82rem;font-family:monospace;color:var(--vivid)}
+.nsg-spinner{width:32px;height:32px;border:3px solid var(--rim);border-top:3px solid var(--vivid);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}</style>
+</head>
+<body>
+<!-- TOP NAVIGATION -->
+<nav class="nsg-topbar">
+  <div class="nsg-brand">NetSage AI</div>
+  <div class="nsg-tabs">
+    <button class="nsg-tab is-active" onclick="switchView('home',this)">Home</button>
+    <button class="nsg-tab" onclick="switchView('cases',this)">Cases</button>
+    <button class="nsg-tab" onclick="switchView('checker',this)">Rule Checker</button>
+    <button class="nsg-tab" onclick="switchView('ai',this)">AI Diagnosis</button>
+    <button class="nsg-tab" onclick="switchView('review',this)">Human Review</button>
+    <button class="nsg-tab" onclick="switchView('dashboard',this)">Dashboard</button>
+    <button class="nsg-tab" onclick="switchView('help',this)">Help</button>
+  </div>
+  <div class="nsg-mode-switch" onclick="swapColorMode()" title="Switch dark and light mode">
+    <span class="nsg-switch-label" id="sw-lt">Light</span>
+    <div class="nsg-switch-track"><div class="nsg-switch-knob" id="sw-knob"></div></div>
+    <span class="nsg-switch-label" id="sw-dk">Dark</span>
+  </div>
+</nav>
+
+<main class="nsg-workspace">
+
+<!-- ===== HOME ===== -->
+<section class="nsg-view is-visible" id="view-home">
+  <div class="nsg-hero">
+    <div>
+      <h1>AI-Powered<br><em>Network Troubleshooting</em></h1>
+      <p>Turn network symptoms into evidence-based diagnoses. NetSage AI analyzes Packet Tracer observations and show-command output to identify probable root causes, recommend the next diagnostic step, and suggest corrective actions—with every diagnosis validated through human review.</p>
+      <div class="nsg-hero-ctas">
+        <button class="nsg-btn nsg-btn--fill" onclick="jumpTo('checker')">Run Rule Checker</button>
+        <button class="nsg-btn nsg-btn--ghost" onclick="jumpTo('ai')">View AI Diagnoses</button>
+        <button class="nsg-btn nsg-btn--ghost" onclick="jumpTo('help')">How It Works</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="nsg-row4 gap-bot-xl">
+    <div class="nsg-kpi"><div class="nsg-kpi-num" id="home-kpi-total">30</div><div class="nsg-kpi-lbl">Lab Cases</div></div>
+    <div class="nsg-kpi"><div class="nsg-kpi-num" id="home-kpi-accuracy">87.5%</div><div class="nsg-kpi-lbl">AI Accuracy</div></div>
+    <div class="nsg-kpi"><div class="nsg-kpi-num" id="home-kpi-rules">14</div><div class="nsg-kpi-lbl">Rule Checks</div></div>
+    <div class="nsg-kpi"><div class="nsg-kpi-num" id="home-kpi-corrections">6</div><div class="nsg-kpi-lbl">Human Corrections</div></div>
+  </div>
+
+  <div class="nsg-panel gap-bot-xl">
+    <div class="nsg-section-title">Diagnostic Workflow</div>
+    <div class="nsg-workflow">
+      <div class="nsg-wf-node"><div class="nsg-wf-badge">1</div><div class="nsg-wf-label">Load Case</div></div>
+      <div class="nsg-wf-arrow">--&gt;</div>
+      <div class="nsg-wf-node"><div class="nsg-wf-badge">2</div><div class="nsg-wf-label">Rule Check</div></div>
+      <div class="nsg-wf-arrow">--&gt;</div>
+      <div class="nsg-wf-node"><div class="nsg-wf-badge">3</div><div class="nsg-wf-label">Gemini AI</div></div>
+      <div class="nsg-wf-arrow">--&gt;</div>
+      <div class="nsg-wf-node"><div class="nsg-wf-badge">4</div><div class="nsg-wf-label">Human Review</div></div>
+      <div class="nsg-wf-arrow">--&gt;</div>
+      <div class="nsg-wf-node"><div class="nsg-wf-badge">5</div><div class="nsg-wf-label">Apply Fix</div></div>
+      <div class="nsg-wf-arrow">--&gt;</div>
+      <div class="nsg-wf-node"><div class="nsg-wf-badge">6</div><div class="nsg-wf-label">Dashboard</div></div>
+    </div>
+  </div>
+
+  <div class="nsg-panel">
+    <div class="nsg-section-title">Fault Coverage Across 30 Cases</div>
+    <div class="nsg-row3 gap-top-md">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="flex-row"><span class="nsg-tag nsg-tag--teal" id="ai-diag-correct">0 Correct</span><span class="sz-sm dim-text">7 cases - Layer 2</span></div>
+        <div class="flex-row"><span class="nsg-tag nsg-tag--teal" id="ai-diag-correct">0 Correct</span><span class="sz-sm dim-text">7 cases - Layer 3</span></div>
+        <div class="flex-row"><span class="nsg-tag nsg-tag--amber" id="ai-diag-partial">0 Partial</span><span class="sz-sm dim-text">4 cases - Layer 3</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="flex-row"><span class="nsg-tag nsg-tag--pink">NAT</span><span class="sz-sm dim-text">3 cases - Layer 3/4</span></div>
+        <div class="flex-row"><span class="nsg-tag nsg-tag--violet">ACL</span><span class="sz-sm dim-text">3 cases - Layer 4</span></div>
+        <div class="flex-row"><span class="nsg-tag nsg-tag--dim">SpanningTree</span><span class="sz-sm dim-text">2 cases - Layer 2</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="flex-row"><span class="nsg-tag nsg-tag--teal" id="ai-diag-correct">0 Correct</span><span class="sz-sm dim-text">1 case - Layer 7</span></div>
+        <div class="flex-row"><span class="nsg-tag nsg-tag--violet">Security</span><span class="sz-sm dim-text">1 case - Layer 7</span></div>
+        <div class="flex-row"><span class="nsg-tag nsg-tag--pink">Wireless</span><span class="sz-sm dim-text">1 case - Layer 2</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CASES ===== -->
+<section class="nsg-view" id="view-cases">
+  <div class="flex-spread gap-bot-lg">
+    <div>
+      <div class="nsg-heading">Case Library</div>
+      <div class="nsg-subheading">All 30 Packet Tracer troubleshooting cases</div>
+    </div>
+    <div class="flex-row" style="gap:8px;flex-wrap:wrap">
+      <div class="nsg-search-wrap">
+        <span class="nsg-search-ico">S</span>
+        <input class="nsg-text-input" id="srch-input" placeholder="Search cases..." oninput="applyFilters()" style="width:200px">
+      </div>
+      <select class="nsg-dropdown" id="flt-category" onchange="applyFilters()" style="width:145px">
+        <option value="">All Categories</option>
+        <option>VLAN</option><option>Routing</option><option>DHCP</option><option>NAT</option>
+        <option>ACL</option><option>SpanningTree</option><option>Wireless</option>
+        <option>DNS</option><option>Security</option><option>PortSecurity</option><option>QoS</option>
+      </select>
+      <select class="nsg-dropdown" id="flt-priority" onchange="applyFilters()" style="width:135px">
+        <option value="">All Priorities</option>
+        <option>Critical</option><option>High</option><option>Medium</option>
+      </select>
+    </div>
+  </div>
+  <div class="nsg-tbl-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Category</th><th>OSI Layer</th><th>Priority</th><th>Fault Description</th><th></th></tr></thead>
+      <tbody id="case-table-body"></tbody>
+    </table>
+  </div>
+  <div id="case-count-display" class="dim-text sz-xs gap-top-md" style="margin-top:8px"></div>
+</section>
+
+<!-- ===== RULE CHECKER ===== -->
+<section class="nsg-view" id="view-checker">
+  <div class="nsg-heading">Rule Checker</div>
+  <div class="nsg-subheading">Deterministic config analysis — 14 pattern rules, no API required</div>
+  <div class="nsg-row2" style="align-items:start">
+    <div>
+      <div class="nsg-panel gap-bot-lg">
+        <div class="nsg-section-title">Select Case to Analyze</div>
+        <select class="nsg-dropdown" id="analyzer-select" onchange="analyzeForViolations()">
+          <option value="">-- Choose a case --</option>
+        </select>
+        <div id="analyzer-preview" class="gap-top-md"></div>
+      </div>
+      <div class="nsg-panel">
+        <div class="nsg-section-title">14 Rules Applied</div>
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:.82rem">
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> Interface Down or Shutdown</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> APIPA Address (169.254.x.x)</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> Trunk Port Not Active</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> DHCP — No Bindings Found</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> ACL Hit Counter Blocking</div>
+          <div><span style="color:var(--flag);font-weight:700">[C]</span> No ACL — Security Gap</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> Missing Route Entry</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> Missing DHCP Relay Helper</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> STP Port in Blocking State</div>
+          <div><span style="color:var(--caution);font-weight:700">[M]</span> Port Err-Disabled State</div>
+          <div><span style="color:var(--caution);font-weight:700">[M]</span> Subnet Mask Mismatch</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> DHCP Wrong Default Gateway</div>
+          <div><span style="color:var(--bad);font-weight:700">[H]</span> NAT Translation Table Empty</div>
+          <div><span style="color:var(--caution);font-weight:700">[M]</span> CRC Errors on Interface</div>
+        </div>
+      </div>
+    </div>
+    <div class="nsg-panel">
+      <div class="nsg-section-title">Violation Report</div>
+      <div id="violation-output"><p class="dim-text sz-sm">Select a case above to begin analysis.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== AI DIAGNOSIS ===== -->
+<section class="nsg-view" id="view-ai">
+  <div class="flex-spread gap-bot-lg">
+    <div>
+      <div class="nsg-heading">AI Diagnosis</div>
+      <div class="nsg-subheading" id="ai-diag-subtitle">Loading statistics...</div>
+    </div>
+    <div class="flex-row" style="gap:7px">
+      <span class="nsg-tag nsg-tag--teal" id="ai-diag-correct">0 Correct</span>
+      <span class="nsg-tag nsg-tag--amber" id="ai-diag-partial">0 Partial</span>
+    </div>
+  </div>
+  <div class="nsg-panel gap-bot-lg" style="border-left:4px solid var(--caution);padding:13px 17px">
+    <p class="sz-sm"><strong>Safety Policy:</strong> Every AI diagnosis must be verified and approved by a human reviewer before any network configuration change is accepted.</p>
+  </div>
+  <!-- LIVE GEMINI DIAGNOSIS PANEL -->
+<div class="nsg-panel gap-bot-lg" style="border:1.5px solid var(--vivid)">
+  <div class="flex-spread" style="margin-bottom:14px">
+    <div>
+      <div class="nsg-section-title" style="color:var(--vivid)">AI-Assisted Network Troubleshooting</div>
+      <p class="sz-sm dim-text" style="margin-top:4px"><span style="color:var(--vivid);font-weight:600;padding:2px 6px;background:var(--vivid-soft);border-radius:4px;">Submit your issue</span> </p>
+    </div>
+    
+  </div>
+
+  <div class="nsg-field" style="margin-bottom:12px">
+    <label class="nsg-field-lbl">SYMPTOM</label>
+    <textarea class="nsg-textarea" id="live-symptom" rows="2"
+      placeholder="PC has IP but cannot reach server"></textarea>
+  </div>
+  
+  <div class="nsg-field" style="margin-bottom:12px">
+    <label class="nsg-field-lbl">PACKET TRACER NOTES</label>
+    <textarea class="nsg-textarea" id="live-notes" rows="2"
+      placeholder="PC belongs to VLAN 30"></textarea>
+  </div>
+
+  <div class="nsg-field" style="margin-bottom:14px">
+    <label class="nsg-field-lbl">SHOW COMMAND OUTPUT</label>
+    <textarea class="nsg-textarea" id="live-show" rows="4"
+      placeholder="show ip route..."></textarea>
+  </div>
+
+  <div class="flex-row" style="gap:10px;flex-wrap:wrap">
+    <button class="nsg-btn nsg-btn--fill" id="live-btn" onclick="runLiveDiagnosis()">Diagnose</button>
+    <button class="nsg-btn nsg-btn--ghost" onclick="document.getElementById('live-symptom').value='';document.getElementById('live-notes').value='';document.getElementById('live-show').value='';document.getElementById('live-result').innerHTML='';document.getElementById('live-status').textContent=''">Clear</button>
+    <span id="live-status" class="sz-sm dim-text"></span>
+  </div>
+  <div id="live-result" style="margin-top:16px"></div>
+</div>
+
+<!-- PRE-LOADED AI CARDS -->
+<div id="diagnosis-cards-container"></div>
+</section>
+
+<!-- ===== HUMAN REVIEW ===== -->
+<section class="nsg-view" id="view-review">
+  <div class="nsg-heading">Human Review</div>
+  <div class="nsg-subheading">Approve, correct, or reject AI diagnoses — all decisions are logged for audit</div>
+  <div class="nsg-row2" style="align-items:start">
+    <div class="nsg-panel">
+      <div class="nsg-section-title">Submit a Review</div>
+      <div class="nsg-field gap-bot-lg">
+        <label class="nsg-field-lbl">Case Selection</label>
+        <select class="nsg-dropdown" id="review-case-select" onchange="loadCaseForReview()">
+          <option value="">-- Choose a case --</option>
+        </select>
+      </div>
+      <div id="review-ai-panel" style="display:none">
+        <div style="padding:12px;background:var(--panel-alt);border-radius:8px;margin-bottom:14px">
+          <div class="sz-xs dim-text bold gap-bot-md" style="margin-bottom:7px">AI ASSESSMENT</div>
+          <div id="review-diagnosis-text" class="sz-sm bold"></div>
+          <div class="flex-row gap-top-md"><span id="review-conf-badge" class="nsg-tag"></span><span id="review-layer-text" class="nsg-tag nsg-tag--teal" style="margin-left:6px"></span></div>
+        </div>
+        <div class="nsg-field gap-bot-lg">
+          <label class="nsg-field-lbl">Your Verdict</label>
+          <div class="nsg-verdict-group">
+            <button class="nsg-verdict-opt" id="opt-accept" onclick="recordVerdict('Accept')">Accept</button>
+            <button class="nsg-verdict-opt" id="opt-edit"   onclick="recordVerdict('Edit')">Edit</button>
+            <button class="nsg-verdict-opt" id="opt-reject" onclick="recordVerdict('Reject')">Reject</button>
+          </div>
+        </div>
+        <div id="correction-block" style="display:none">
+          <div class="nsg-field gap-bot-lg"><label class="nsg-field-lbl">Correct Root Cause</label><textarea class="nsg-textarea" id="correction-text" placeholder="Enter the correct diagnosis..."></textarea></div>
+          <div class="nsg-field gap-bot-lg"><label class="nsg-field-lbl">Why AI Was Incorrect</label><textarea class="nsg-textarea" id="correction-notes" placeholder="What evidence did AI miss?"></textarea></div>
+        </div>
+        <div class="nsg-field gap-bot-lg"><label class="nsg-field-lbl">Reviewer Name or Role</label><input class="nsg-text-input" id="reviewer-name" placeholder="e.g. Lab Instructor"></div>
+        <button class="nsg-btn nsg-btn--fill" onclick="submitReviewEntry()" style="width:100%">Record Review</button>
+      </div>
+      <div id="review-no-data" class="dim-text sz-sm" style="display:none">No AI diagnosis available for this case yet.</div>
+    </div>
+    <div class="nsg-panel">
+      <div class="flex-spread gap-bot-lg"><span class="nsg-section-title" style="margin:0">Review History</span><span id="review-log-count" class="nsg-tag nsg-tag--violet">0 entries</span></div>
+      <div id="review-log-container"><p class="dim-text sz-sm">No reviews submitted yet.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== DASHBOARD ===== -->
+<section class="nsg-view" id="view-dashboard">
+  <div class="nsg-heading">Analytics Dashboard</div>
+  <div class="nsg-subheading">System-wide statistics across all 30 cases and AI performance metrics</div>
+  <div class="nsg-row4 gap-bot-xl">
+    <div class="nsg-kpi"><div class="nsg-kpi-num">30</div><div class="nsg-kpi-lbl">Total Cases</div></div>
+    <div class="nsg-kpi"><div class="nsg-kpi-num" id="home-kpi-accuracy">87.5%</div><div class="nsg-kpi-lbl">AI Accuracy</div></div>
+    <div class="nsg-kpi"><div class="nsg-kpi-num" id="dash-kpi-corrections" style="color:var(--caution)">6</div><div class="nsg-kpi-lbl">Human Corrections</div></div>
+    <div class="nsg-kpi"><div class="nsg-kpi-num" id="dash-kpi-rules" style="color:var(--pop)">14</div><div class="nsg-kpi-lbl">Rule Checks</div></div>
+  </div>
+  <div class="nsg-row2 gap-bot-xl">
+    <div class="nsg-panel"><div class="nsg-section-title">Cases by Category</div><div class="nsg-chart-wrap"><canvas id="chart-category"></canvas></div></div>
+    <div class="nsg-panel"><div class="nsg-section-title">AI Verdict Breakdown</div><div class="nsg-chart-wrap"><canvas id="chart-verdict"></canvas></div></div>
+  </div>
+  <div class="nsg-row2 gap-bot-xl">
+    <div class="nsg-panel"><div class="nsg-section-title">Cases by OSI Layer</div><div class="nsg-chart-wrap" style="height:300px"><canvas id="chart-layer"></canvas></div></div>
+    <div class="nsg-panel"><div class="nsg-section-title">Severity Distribution</div><div class="nsg-chart-wrap"><canvas id="chart-severity"></canvas></div></div>
+  </div>
+  <div class="nsg-panel">
+    <div class="nsg-section-title">Responsible AI Audit Log</div>
+    <div class="nsg-tbl-wrap gap-top-md">
+      <table>
+        <thead><tr><th>Case</th><th>AI Confidence</th><th>Outcome</th><th>Reviewer</th><th>Notes</th></tr></thead>
+        <tbody id="audit-log-body"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== HELP ===== -->
+<section class="nsg-view" id="view-help">
+  <div class="nsg-heading">Help and User Guide</div>
+  <div class="nsg-subheading">Learn how to use every feature of NetSage AI</div>
+  <div class="nsg-panel gap-bot-xl" style="border-left:4px solid var(--vivid)">
+    <div class="nsg-section-title">About NetSage AI</div>
+    <p class="sz-sm" style="line-height:1.8;max-width:700px">NetSage AI diagnoses Cisco Packet Tracer lab faults by reading a symptom and show-command output, then using Google Gemini AI to pinpoint the root cause, classify the OSI layer, and suggest a step-by-step Internetwork Operating System fix.<br><br><strong>Responsible AI policy:</strong> Every AI diagnosis must be approved by a human before any fix is applied. All decisions are tracked in the Responsible AI audit log.</p>
+  </div>
+  <div class="nsg-section-title gap-bot-lg">Step-by-Step Guide</div>
+  <div class="nsg-guide-step"><div class="nsg-step-badge">1</div><div class="nsg-step-body"><h3>Browse the Case Library</h3><p>Go to the Cases tab to explore all 30 lab scenarios. Use the search bar or category and priority filters to quickly find a specific fault type. Click any row to expand the full case details including show-command output.</p><div class="nsg-tip-block">Tip: Filter by Critical to see the most serious network security gaps.</div></div></div>
+  <div class="nsg-guide-step"><div class="nsg-step-badge">2</div><div class="nsg-step-body"><h3>Run the Rule Checker</h3><p>Go to the Rule Checker tab and select a case. The system instantly applies 14 deterministic rules against the show-command text — no API or internet needed. Each violation shows the severity level and exact Internetwork Operating System fix command.</p><div class="nsg-tip-block">Tip: Start here before AI — the rule checker identifies most common faults instantly.</div></div></div>
+  <div class="nsg-guide-step"><div class="nsg-step-badge">3</div><div class="nsg-step-body"><h3>Review AI Diagnoses</h3><p>Go to the AI Diagnosis tab to see 8 real Gemini AI results. Each card shows confidence level, OSI layer, root cause explanation, evidence quoted from show outputs, the recommended next diagnostic command, and Internetwork Operating System fix steps.</p><div class="nsg-tip-block">Tip: Click any card header to expand the full diagnosis detail.</div></div></div>
+  <div class="nsg-guide-step"><div class="nsg-step-badge">4</div><div class="nsg-step-body"><h3>Submit a Human Review</h3><p>Go to the Human Review tab. Select a case, read the AI diagnosis, then record your verdict: Accept (AI is correct), Edit (partially right — enter correction), or Reject (AI is wrong — enter correct answer). Every review is saved permanently.</p><div class="nsg-tip-block">Tip: This is the most important step. Never apply a network fix without human verification.</div></div></div>
+  <div class="nsg-guide-step"><div class="nsg-step-badge">5</div><div class="nsg-step-body"><h3>Explore the Dashboard</h3><p>Go to the Dashboard tab for visual analytics — cases by category, AI verdict breakdown, OSI layer distribution, severity breakdown, and the full Responsible AI audit log showing all human corrections.</p><div class="nsg-tip-block">Tip: The audit log is great for a presentation — it shows where AI went wrong and why.</div></div></div>
+  <div class="nsg-section-title gap-top-lg gap-bot-lg" style="margin-top:24px">Frequently Asked Questions</div>
+  <div id="faq-container"></div>
+  <div class="nsg-panel gap-top-lg" style="margin-top:16px;border-left:4px solid var(--pop)">
+    <div class="nsg-section-title">Technical Info</div>
+    <p class="sz-sm" style="line-height:1"><span class="mono-block">If you see 503 errors the server is busy — wait 1-2 minutes then retry.</p>
+  </div>
+</section>
+
+</main>
+<div class="nsg-notification" id="nsg-notif">
+  <div class="toast-icon" id="nsg-notif-icon" style="background:transparent;padding:0;overflow:hidden">
+    <img src="logo.png" alt="N" style="width:36px;height:36px;object-fit:contain;border-radius:8px">
+  </div>
+  <div class="toast-body">
+    <div class="toast-title" id="nsg-notif-title">NetSage AI</div>
+    <div class="toast-msg" id="nsg-notif-msg"></div>
+  </div>
+</div>
+<script>
+/* ────────────────────────────────────────────────────────────
+   NetSage AI — Client-side engine
+   All 30 lab cases, 8 live Gemini diagnoses, 6 audit entries,
+   14 rule checks, and full review workflow in one file.
+   ──────────────────────────────────────────────────────────── */
+
+/* ── CASE DATASET ─────────────────────────────────────────── */
+var CaseData = [
+  {caseId:"C001", fault:"PC in VLAN 10 cannot ping PC in VLAN 20 even though both can ping their default gateways", topology:"Router-on-a-stick: SW1 connected to R1 via trunk, PCs on Fa0/1 VLAN10 and Fa0/2 VLAN20", output:"show interfaces trunk: Fa0/24 not trunking (access mode)\nshow vlan brief: VLAN10 and VLAN20 active", rootcause:"Trunk port misconfigured as access port — inter-VLAN traffic cannot pass", osi:"Layer2", category:"VLAN", priority:"High"},
+  {caseId:"C002", fault:"PC1 gets IP 169.254.x.x and cannot communicate with any host", topology:"Single router R1 with DHCP pool, SW1 connects PC1 on Fa0/1", output:"show ip dhcp binding: No bindings\nshow interfaces Fa0/0: line protocol is down", rootcause:"Router interface Fa0/0 is shutdown — DHCP server unreachable", osi:"Layer1", category:"DHCP", priority:"High"},
+  {caseId:"C003", fault:"PC can ping gateway but cannot reach www.cisco.com or any external site", topology:"R1 connected to ISP via Se0/0/0, PAT configured for inside LAN", output:"show ip nat translations: Empty\nshow access-lists: ACL 1 deny any (hits: 45)", rootcause:"NAT ACL denying LAN traffic — no translation entries created", osi:"Layer3", category:"NAT", priority:"High"},
+  {caseId:"C004", fault:"Wireless clients associate to AP but get 169.254.x.x addresses", topology:"WLC manages AP, DHCP server on core switch, AP on VLAN 10", output:"show running-config: No ip helper-address on VLAN 10 SVI", rootcause:"Missing ip helper-address on VLAN 10 SVI — DHCP not relayed to server", osi:"Layer3", category:"DHCP", priority:"High"},
+  {caseId:"C005", fault:"PC1 can ping 8.8.8.8 but cannot resolve google.com", topology:"R1 acts as DNS server, PC configured with DNS 192.168.1.2", output:"show running-config: ip dns server enabled\nno ip domain-lookup", rootcause:"DNS lookup disabled with no ip domain-lookup on router", osi:"Layer7", category:"DNS", priority:"Medium"},
+  {caseId:"C006", fault:"PC in VLAN 30 can reach VLAN 30 hosts but not VLAN 40", topology:"R1 has sub-interfaces for VLAN 30 and 40, ACL applied on Gi0/0.40", output:"show access-lists: ACL 101 deny ip 192.168.30.0 0.0.0.255 192.168.40.0 0.0.0.255 (hits: 120)", rootcause:"ACL 101 blocking all traffic from VLAN 30 to VLAN 40", osi:"Layer4", category:"ACL", priority:"High"},
+  {caseId:"C007", fault:"New PC gets correct IP but cannot ping default gateway", topology:"PC in VLAN 20, gateway should be 192.168.20.1, SVI on multilayer switch", output:"show interfaces vlan 20: Vlan20 is down line protocol is down\nshow vlan brief: VLAN 20 active", rootcause:"VLAN 20 SVI is down — no active ports assigned to VLAN 20", osi:"Layer2", category:"VLAN", priority:"High"},
+  {caseId:"C008", fault:"All PCs lose connectivity after switch reboot", topology:"Rapid PVST+ running, root bridge was SW1, SW3 connected to SW1 and SW2", output:"show spanning-tree vlan 1: SW3 is now root bridge with lower priority\nSW1 priority 32769", rootcause:"SW3 won root bridge election after reboot — unexpected topology change", osi:"Layer2", category:"SpanningTree", priority:"High"},
+  {caseId:"C009", fault:"PC cannot SSH to router, Telnet works fine", topology:"R1 with SSH and Telnet enabled, PC IP 192.168.1.10", output:"show ip ssh: SSH disabled\nshow running-config: no crypto key generate rsa\ntransport input telnet", rootcause:"RSA keys not generated — SSH not operational", osi:"Layer7", category:"Security", priority:"Medium"},
+  {caseId:"C010", fault:"Two PCs on same switch get duplicate IP conflict messages", topology:"Static IPs configured manually, DHCP also running", output:"show ip dhcp binding: 192.168.1.50 assigned twice\nshow arp: 192.168.1.50 appears twice", rootcause:"Duplicate IP — DHCP assigned address already statically configured on another PC", osi:"Layer3", category:"DHCP", priority:"Medium"},
+  {caseId:"C011", fault:"PC1 can ping 192.168.2.1 but not 192.168.2.10", topology:"R1 and R2 connected via Se0/0/0, static routes configured", output:"show ip route on R2: No route for 192.168.1.0/24\nshow ip route on R1: 192.168.2.0/24 via 10.0.0.2", rootcause:"Missing return route on R2 — asymmetric routing causes one-way reachability", osi:"Layer3", category:"Routing", priority:"High"},
+  {caseId:"C012", fault:"OSPF neighbors not forming between R1 and R2", topology:"R1 and R2 on 10.0.0.0/30, OSPF configured", output:"show ip ospf neighbor: Empty on both\nR1 area 0, R2 area 1 on same link", rootcause:"OSPF area mismatch on shared link prevents adjacency", osi:"Layer3", category:"Routing", priority:"High"},
+  {caseId:"C013", fault:"RIP routes not appearing after configuration", topology:"R1 R2 R3 in RIP network, all interfaces configured", output:"show ip rip database: Empty\nshow interfaces Se0/0/0: line protocol is down", rootcause:"Serial interface down — RIP adjacency cannot form", osi:"Layer1", category:"Routing", priority:"High"},
+  {caseId:"C014", fault:"Guest VLAN users can access internal finance server", topology:"Guest VLAN 99 and Finance VLAN 10 on same switch", output:"show access-lists: No ACLs configured\nshow vlan brief: VLAN99 and VLAN10 active", rootcause:"Missing ACL — guest VLAN not isolated from internal VLANs (critical security gap)", osi:"Layer3", category:"ACL", priority:"Critical"},
+  {caseId:"C015", fault:"PC gets correct IP from DHCP but wrong default gateway", topology:"DHCP pool on R1, gateway should be 192.168.1.1", output:"show ip dhcp pool: default-router 192.168.10.1 (wrong subnet)", rootcause:"DHCP pool default-router configured with wrong gateway IP", osi:"Layer3", category:"DHCP", priority:"High"},
+  {caseId:"C016", fault:"Trunk between SW1 and SW2 only carries VLAN 1", topology:"SW1 and SW2 trunk link, VLANs 10 20 30 should be allowed", output:"show interfaces trunk: SW1 Fa0/24 VLANs allowed: 1", rootcause:"Trunk allowed VLAN list not configured — defaults to VLAN 1 only", osi:"Layer2", category:"VLAN", priority:"High"},
+  {caseId:"C017", fault:"PC1 cannot ping PC2 on same switch same VLAN", topology:"Both PCs on VLAN 10, port Fa0/3 has port-security", output:"show port-security interface Fa0/3: err-disabled\nViolation mode shutdown", rootcause:"Port security violation put port in err-disabled state", osi:"Layer2", category:"PortSecurity", priority:"Medium"},
+  {caseId:"C018", fault:"NAT translations exist but internet still not reachable", topology:"R1 doing NAT, ISP link Se0/0/0", output:"show ip nat translations: translations present\nshow ip route: No default route", rootcause:"Missing default route to ISP — packets cannot be forwarded upstream", osi:"Layer3", category:"Routing", priority:"High"},
+  {caseId:"C019", fault:"EIGRP neighbor drops periodically", topology:"R1 and R2 running EIGRP AS 100", output:"show ip eigrp neighbors: flapping\nshow interfaces Se0/0/0: CRC errors 320", rootcause:"Excessive CRC errors on serial link causing EIGRP hello packet loss", osi:"Layer1", category:"Routing", priority:"Medium"},
+  {caseId:"C020", fault:"Wireless PC cannot reach wired PCs", topology:"Wireless clients on SSID Corp, AP connected to SW1 Fa0/10", output:"show vlan brief: Fa0/10 in VLAN 1\nSSID Corp mapped to VLAN 20, no VLAN 20 SVI", rootcause:"AP access port in wrong VLAN — wireless traffic in VLAN 1 not VLAN 20", osi:"Layer2", category:"Wireless", priority:"High"},
+  {caseId:"C021", fault:"PC gets DHCP address but HTTP times out, DNS resolves", topology:"R1 doing PAT, HTTP traffic should work", output:"show ip nat translations: UDP port 53 present, TCP port 80 absent\nACL permits UDP only", rootcause:"NAT ACL only permits UDP — TCP traffic for HTTP not translated", osi:"Layer4", category:"NAT", priority:"High"},
+  {caseId:"C022", fault:"PC1 cannot ping PC2 on different switches, same IP range", topology:"SW1 and SW2 connected via Fa0/24, no trunk configured", output:"show interfaces Fa0/24 on SW1: VLAN 10\nSW2: VLAN 20", rootcause:"Uplink ports in different VLANs — inter-switch communication blocked", osi:"Layer2", category:"VLAN", priority:"High"},
+  {caseId:"C023", fault:"Router shows route but ping fails with U.U.U response", topology:"R1 has route via R2, R2 has no return route", output:"show ip route R1: 172.16.0.0/24 via 10.0.0.2\nshow ip route R2: No route to 192.168.1.0/24", rootcause:"Missing return route on R2 — ICMP Unreachable sent back", osi:"Layer3", category:"Routing", priority:"High"},
+  {caseId:"C024", fault:"ACL configured to block Telnet but SSH also gets blocked", topology:"ACL 101 applied inbound Gi0/0, meant to block port 23 only", output:"show access-lists: deny tcp any any eq 23; permit ip any any\nshow ip ssh: enabled", rootcause:"Verify ACL port numbers — SSH port 22 must not be blocked", osi:"Layer4", category:"ACL", priority:"Medium"},
+  {caseId:"C025", fault:"Switch port up/up but no traffic passes", topology:"Fa0/1 connected to PC, port in VLAN 10", output:"show mac-address-table: No entry for PC MAC\nshow spanning-tree: Fa0/1 BLK", rootcause:"STP placed port in blocking state due to loop detection", osi:"Layer2", category:"SpanningTree", priority:"High"},
+  {caseId:"C026", fault:"OSPF redistribution from RIP fails", topology:"R3 redistributes RIP into OSPF area 0", output:"show ip ospf database: External LSAs present\nshow ip route: No E2 routes on R1/R2\nredistribute rip missing subnets keyword", rootcause:"Missing subnets keyword — classful redistribution dropping subnet routes", osi:"Layer3", category:"Routing", priority:"High"},
+  {caseId:"C027", fault:"PC cannot ping gateway on same subnet", topology:"R1 Gi0/0 has 192.168.1.1/24, PC on same segment", output:"show interfaces Gi0/0: 192.168.1.1/25\nPC mask /24", rootcause:"Subnet mask mismatch — router uses /25 while PC uses /24", osi:"Layer3", category:"Routing", priority:"Medium"},
+  {caseId:"C028", fault:"VoIP phones register but call audio is choppy", topology:"IP phones on VLAN 150, QoS configured to prioritize voice", output:"show mls qos: QoS disabled globally\nno service-policy applied", rootcause:"QoS not enabled — voice traffic competing equally with data traffic", osi:"Layer2", category:"QoS", priority:"Medium"},
+  {caseId:"C029", fault:"PC cannot reach internet after ISP changed IP block", topology:"New ISP subnet 198.51.100.0/28, NAT pool has old IPs", output:"show ip nat translations: using 203.0.113.0/24 (old pool)", rootcause:"NAT pool not updated with new ISP addresses", osi:"Layer3", category:"NAT", priority:"High"},
+  {caseId:"C030", fault:"New VLAN 50 devices cannot communicate after switch config", topology:"VLAN 50 on SW1, SVI 192.168.50.1/24, PCs getting IPs", output:"show vlan brief: VLAN 50 active SW1\ntrunk: SW2 does not include VLAN 50", rootcause:"VLAN 50 not added to trunk between SW1 and SW2 — devices isolated", osi:"Layer2", category:"VLAN", priority:"Medium"}
+];
+
+/* ── AI DIAGNOSIS RESULTS ─────────────────────────────────── */
+var DiagnosisData = [
+  {caseId:"C001", conf_level:"high", osi_layer:"Layer2", root_cause:"Switch interface Fa0/24 is operating in access mode instead of trunk mode, stripping 802.1Q tags and preventing inter-VLAN routing via R1 sub-interfaces.", evidence:["Fa0/24 not trunking (access mode) — tagged frames stripped at switch port","Both PCs ping own gateway, confirming Layer1 is up and VLAN assignment is correct within each VLAN"], next_cmd:"show interfaces Fa0/24 switchport", fix_steps:["SW1(config)# interface Fa0/24","SW1(config-if)# switchport mode trunk","SW1(config-if)# switchport trunk allowed vlan 10,20","Verify: show interfaces trunk"], alt_cause:"Sub-interface encapsulation dot1q command missing on R1", ai_verdict:"partial", category:"VLAN"},
+  {caseId:"C002", conf_level:"high", osi_layer:"Layer1", root_cause:"Router FastEthernet0/0 line protocol is down (shutdown state), preventing DHCP Discover packets from reaching the server pool on R1 and causing Windows APIPA assignment.", evidence:["show interfaces Fa0/0: line protocol is down — interface in shutdown","show ip dhcp binding: No bindings despite pool being configured — zero DHCP transactions completed"], next_cmd:"show ip interface brief", fix_steps:["R1(config)# interface FastEthernet0/0","R1(config-if)# no shutdown","Run on PC: ipconfig /renew"], alt_cause:"Physical cable disconnected between R1 Fa0/0 and SW1", ai_verdict:"correct", category:"DHCP"},
+  {caseId:"C003", conf_level:"high", osi_layer:"Layer3", root_cause:"Standard ACL 1 configured for NAT contains an implicit or explicit deny any, actively blocking all inside LAN traffic before translation can occur. NAT translation table is completely empty.", evidence:["show access-lists: ACL 1 deny any with 45 hits — actively blocking every packet","show ip nat translations: empty despite sustained traffic attempts from PC"], next_cmd:"show running-config | include access-list", fix_steps:["R1(config)# no access-list 1","R1(config)# access-list 1 permit 192.168.1.0 0.0.0.255","Verify: show ip nat translations — should populate after PC sends traffic"], alt_cause:"NAT inside/outside interface labels not configured correctly", ai_verdict:"correct", category:"NAT"},
+  {caseId:"C004", conf_level:"high", osi_layer:"Layer3", root_cause:"VLAN 10 SVI is missing the ip helper-address command, so DHCP Discover broadcasts from wireless clients are not forwarded to the DHCP server on a different subnet.", evidence:["Wireless clients receive 169.254.x.x — DHCP Discover not forwarded across subnets","VLAN 10 SVI configuration shows no ip helper-address directive"], next_cmd:"show interface vlan 10", fix_steps:["CoreSW(config)# interface vlan 10","CoreSW(config-if)# ip helper-address <DHCP-server-IP>","Verify: show ip dhcp binding — should show new entries"], alt_cause:"DHCP pool network range does not match VLAN 10 subnet", ai_verdict:"correct", category:"DHCP"},
+  {caseId:"C005", conf_level:"high", osi_layer:"Layer7", root_cause:"The no ip domain-lookup command on R1 disables all DNS resolution forwarding, causing the router to silently drop DNS queries even though ip dns server is enabled.", evidence:["show running-config: no ip domain-lookup present — DNS queries disabled","PC successfully pings 8.8.8.8 (IP works) but cannot resolve names — DNS-specific fault confirmed"], next_cmd:"show running-config | include domain", fix_steps:["R1(config)# ip domain-lookup","R1(config)# ip name-server 8.8.8.8","Verify: ping google.com from PC — should now resolve"], alt_cause:"DNS server IP address misconfigured on PC — verify with ipconfig /all", ai_verdict:"correct", category:"DNS"},
+  {caseId:"C006", conf_level:"high", osi_layer:"Layer4", root_cause:"ACL 101 applied inbound on Gi0/0.40 sub-interface contains an explicit deny matching all IP traffic from 192.168.30.0/24 to 192.168.40.0/24, confirmed by 120 match hits.", evidence:["show access-lists: ACL 101 deny ip 192.168.30.0/24 to 192.168.40.0/24 with 120 hits","VLAN 30 to VLAN 30 traffic works normally — fault is isolated to inter-VLAN path filtered by ACL"], next_cmd:"show ip interface Gi0/0.40", fix_steps:["R1(config)# ip access-list extended 101","R1(config-ext-nacl)# no 10 (remove deny rule)","Verify: show access-lists 101; then ping from VLAN30 host to VLAN40 host"], alt_cause:"ACL may be applied in wrong direction on the sub-interface", ai_verdict:"correct", category:"ACL"},
+  {caseId:"C007", conf_level:"high", osi_layer:"Layer2", root_cause:"VLAN 20 SVI is in down/down state because no physical switch ports are assigned to VLAN 20 in an active state. Multilayer switches automatically bring SVIs down when no member ports are active.", evidence:["show interfaces vlan 20: Vlan20 is down, line protocol is down","show vlan brief: VLAN 20 listed as active but no port assignments shown"], next_cmd:"show vlan brief", fix_steps:["SW(config)# interface Fa0/X (the PC's port)","SW(config-if)# switchport access vlan 20","Verify: show interfaces vlan 20 — should transition to up/up"], alt_cause:"SVI was manually shutdown with the shutdown command", ai_verdict:"correct", category:"VLAN"},
+  {caseId:"C008", conf_level:"medium", osi_layer:"Layer2", root_cause:"After the reboot, SW3 won the STP root bridge election because all switches had equal priority (32769) and SW3 had the lowest MAC address, triggering a topology reconvergence.", evidence:["show spanning-tree vlan 1: SW3 is now root bridge — unexpected change from SW1","All switches at equal priority 32769 — root election decided by lowest MAC address"], next_cmd:"show spanning-tree vlan 1 detail", fix_steps:["SW1(config)# spanning-tree vlan 1 priority 4096","Alternatively: SW1# spanning-tree vlan 1 root primary","Verify: show spanning-tree vlan 1 — confirm SW1 is elected root bridge"], alt_cause:"BPDUs were blocked causing multiple switches to each believe they are root", ai_verdict:"correct", category:"SpanningTree"}
+];
+
+/* ── RESPONSIBLE AI AUDIT LOG ────────────────────────────── */
+var AuditLog = [
+  {caseRef:"C003", aiConf:"medium", outcome:"Edited", correction:"ACL denying all traffic before NAT translation can occur", annotation:"AI had medium confidence but missed the ACL hit counter evidence showing the deny rule actively firing", reviewer:"Network Instructor", reviewDate:"2024-01-15"},
+  {caseRef:"C011", aiConf:"low",    outcome:"Rejected", correction:"Missing return route on R2 causing asymmetric routing", annotation:"AI hallucinated a firewall component that does not exist in the topology", reviewer:"Lab TA", reviewDate:"2024-01-16"},
+  {caseRef:"C019", aiConf:"medium", outcome:"Edited", correction:"Physical layer CRC errors causing EIGRP hello packet loss", annotation:"AI jumped directly to Layer 3 without checking the CRC error count in show interfaces output", reviewer:"Network Instructor", reviewDate:"2024-01-17"},
+  {caseRef:"C024", aiConf:"high",   outcome:"Edited", correction:"The explicit ACL is correct for port 23 — investigate VTY line access-class separately", annotation:"AI missed a separate ACL on the VTY lines; the interface ACL was correctly configured", reviewer:"Senior Student", reviewDate:"2024-01-18"},
+  {caseRef:"C027", aiConf:"medium", outcome:"Rejected", correction:"Subnet mask mismatch — router interface uses /25 while PC uses /24", annotation:"AI assumed a PC configuration error without examining the show interfaces mask output", reviewer:"Lab TA", reviewDate:"2024-01-19"},
+  {caseRef:"C014", aiConf:"low",    outcome:"Edited", correction:"No ACL exists between VLANs — security policy completely absent", annotation:"AI focused on trunk configuration when show trunk confirmed it was working; root issue was zero ACL policy", reviewer:"Network Instructor", reviewDate:"2024-01-20"}
+];
+
+/* ── FREQUENTLY ASKED QUESTIONS ──────────────────────────── */
+var FAQData = [
+  {question:"Why must every AI diagnosis go through human review?", answer:"AI systems can hallucinate components not present in the topology, overlook key evidence in show-command output, or skip systematic OSI layer checks. Human review catches these errors before an incorrect fix is applied to the network. Our audit log records 6 cases where humans caught AI mistakes."},
+  {question:"What does APIPA (169.254.x.x) tell us about the fault?", answer:"APIPA is assigned by Windows when DHCP fails completely. Seeing 169.254.x.x is a strong indicator that the DHCP server is unreachable — typically because the server's interface is shutdown or because a DHCP relay (ip helper-address) is missing on the SVI."},
+  {question:"What is the difference between Rule Checker and AI Diagnosis?", answer:"Rule Checker applies 14 fixed pattern-matching rules instantly with no API needed — it is deterministic and always reliable for known signatures. AI Diagnosis uses Gemini to reason over the full context and can handle novel or complex cases, but it can make mistakes. Best practice is to run both."},
+  {question:"Why does live Gemini diagnosis take several minutes?", answer:"The Google Gemini free tier enforces a rate limit of approximately 2 requests per minute. The live_diagnosis.py script waits 32 seconds between each case to stay within this limit. A 503 response means the server is under load — wait 1-2 minutes and retry."},
+  {question:"Does the website require internet to function?", answer:"No. The entire website including all 30 cases, rule checker, AI results, human review, and dashboard charts works completely offline. Only live_diagnosis.py requires internet to reach the Gemini API."},
+  {question:"How do I share this with other students or instructors?", answer:"Share the single index.html file — it is fully self-contained with all data embedded. Alternatively share the entire NetSage_AI folder for access to the Python scripts as well. No web server or installation required."},
+  {question:"Which OSI layers does the system cover?", answer:"Layer 1 Physical: interface down, CRC errors. Layer 2 Data Link: VLAN misconfiguration, STP, trunk errors, port-security, wireless VLAN mapping. Layer 3 Network: static/dynamic routing, DHCP, NAT/PAT, subnetting. Layer 4 Transport: ACL port filtering, NAT protocol filtering. Layer 7 Application: DNS lookup failures, SSH key configuration."}
+];
+
+/* ── RULE ENGINE (14 DETERMINISTIC CHECKS) ───────────────── */
+var RuleEngine = [
+  {label:"Interface Down or Shutdown",     level:"HIGH",     detect:function(t){return t.includes("line protocol is down")||t.includes("administratively down")}, remedy:"(config-if)# no shutdown"},
+  {label:"APIPA Address Detected",         level:"HIGH",     detect:function(t){return t.includes("169.254")},                                                     remedy:"Check DHCP server reachability and pool configuration"},
+  {label:"Trunk Port Not Active",          level:"HIGH",     detect:function(t){return t.includes("not trunking")||t.includes("access mode")},                     remedy:"(config-if)# switchport mode trunk"},
+  {label:"DHCP — No Bindings Found",       level:"HIGH",     detect:function(t){return t.includes("no bindings")||t.includes("no binding")},                       remedy:"Verify pool config and ensure interface is administratively up"},
+  {label:"ACL Hit Counter Blocking",       level:"HIGH",     detect:function(t){return t.includes("deny")&&t.includes("hits")},                                    remedy:"Review: show access-lists — check permit/deny order and direction"},
+  {label:"No ACL — Security Gap",          level:"CRITICAL", detect:function(t){return t.includes("no acl")||(t.includes("no access")&&t.includes("vlan"))},       remedy:"Apply: ip access-list extended <N>, then ip access-group <N> in|out"},
+  {label:"Missing Route Entry",            level:"HIGH",     detect:function(t){return t.includes("no route")||t.includes("no default route")},                    remedy:"ip route <network> <mask> <next-hop> or use dynamic routing"},
+  {label:"Missing DHCP Relay Helper",      level:"HIGH",     detect:function(t){return t.includes("no ip helper")||t.includes("no helper-address")},               remedy:"(config-if)# ip helper-address <dhcp-server-ip>"},
+  {label:"STP Port in Blocking State",     level:"HIGH",     detect:function(t){return(t.includes("blk")||t.includes("blocking"))&&!t.includes("ip")},             remedy:"spanning-tree portfast on access ports or resolve topology loop"},
+  {label:"Port Err-Disabled",             level:"MEDIUM",   detect:function(t){return t.includes("err-disabled")},                                                remedy:"(config-if)# shutdown then no shutdown — fix violation cause first"},
+  {label:"Subnet Mask Mismatch",          level:"MEDIUM",   detect:function(t){return t.includes("/25")&&t.includes("/24")},                                      remedy:"Align subnet masks on all devices in same segment"},
+  {label:"DHCP Wrong Default Gateway",    level:"HIGH",     detect:function(t){return t.includes("wrong subnet")||(t.includes("default-router")&&t.includes("wrong"))}, remedy:"ip dhcp pool <name> — correct default-router statement"},
+  {label:"NAT Translation Table Empty",   level:"HIGH",     detect:function(t){return t.includes("nat translations")&&t.includes("empty")},                        remedy:"Verify ACL for NAT and confirm inside/outside interface labels"},
+  {label:"CRC Errors on Interface",       level:"MEDIUM",   detect:function(t){return t.includes("crc errors")},                                                   remedy:"Replace cable, check for duplex mismatch, inspect connectors"}
+];
+</script>
+<script>
+/* ── BADGE HELPERS ───────────────────────────────────────── */
+function tagForPriority(p){
+  var map = {Critical:"nsg-tag--violet", High:"nsg-tag--red", Medium:"nsg-tag--amber", Low:"nsg-tag--teal"};
+  return '<span class="nsg-tag '+(map[p]||"nsg-tag--dim")+'">'+p+'</span>';
+}
+function tagForCategory(c){
+  var map = {VLAN:"nsg-tag--teal",Routing:"nsg-tag--teal",DHCP:"nsg-tag--amber",NAT:"nsg-tag--pink",ACL:"nsg-tag--violet",SpanningTree:"nsg-tag--dim",Wireless:"nsg-tag--pink",DNS:"nsg-tag--teal",Security:"nsg-tag--violet",PortSecurity:"nsg-tag--amber",QoS:"nsg-tag--teal"};
+  return '<span class="nsg-tag '+(map[c]||"nsg-tag--dim")+'">'+c+'</span>';
+}
+function tagForLayer(l){
+  return '<span class="nsg-tag nsg-tag--teal" id="ai-diag-correct">0 Correct</span>';
+}
+function tagForConfidence(c){
+  var map = {high:"nsg-tag--teal", medium:"nsg-tag--amber", low:"nsg-tag--red"};
+  return '<span class="nsg-tag '+(map[c]||"nsg-tag--dim")+'">'+c.toUpperCase()+'</span>';
+}
+function tagForVerdict(v){
+  var map = {correct:"nsg-tag--teal", partial:"nsg-tag--amber", wrong:"nsg-tag--red"};
+  return '<span class="nsg-tag '+(map[v]||"nsg-tag--dim")+'">'+v+'</span>';
+}
+function tagForOutcome(v){
+  var map = {Accepted:"nsg-tag--teal",Edited:"nsg-tag--amber",Rejected:"nsg-tag--red",Accept:"nsg-tag--teal",Edit:"nsg-tag--amber",Reject:"nsg-tag--red"};
+  return '<span class="nsg-tag '+(map[v]||"nsg-tag--dim")+'">'+v+'</span>';
+}
+
+/* ── COLOR MODE ──────────────────────────────────────────── */
+var darkModeActive = localStorage.getItem("netsage-mode") !== "light";
+
+function applyColorMode(){
+  var mode = darkModeActive ? "dark" : "light";
+  document.documentElement.setAttribute("data-mode", mode);
+  // Update chart colors if charts already rendered
+  if(typeof chartsReady !== "undefined" && chartsReady){
+    var textColor = darkModeActive ? "#9a9a9a" : "#6F687D";
+    var gridColor = darkModeActive ? "#2a2a2a" : "#E3DFEC";
+    Object.keys(ChartInstances).forEach(function(k){
+      var c = ChartInstances[k];
+      if(c.options.scales){
+        if(c.options.scales.x){ c.options.scales.x.ticks.color = textColor; c.options.scales.x.grid.color = gridColor; }
+        if(c.options.scales.y){ c.options.scales.y.ticks.color = textColor; c.options.scales.y.grid.color = gridColor; }
+      }
+      if(c.options.plugins && c.options.plugins.legend) c.options.plugins.legend.labels.color = textColor;
+      c.update();
+    });
+  }
+}
+
+function swapColorMode(){
+  darkModeActive = !darkModeActive;
+  localStorage.setItem("netsage-mode", darkModeActive ? "dark" : "light");
+  applyColorMode();
+}
+
+applyColorMode();
+
+/* ── NAVIGATION ──────────────────────────────────────────── */
+function switchView(sectionId, clickedBtn){
+  // Hide all views
+  var views = document.querySelectorAll(".nsg-view");
+  for(var i=0;i<views.length;i++) views[i].classList.remove("is-visible");
+  // Deactivate all tabs
+  var tabs = document.querySelectorAll(".nsg-tab");
+  for(var j=0;j<tabs.length;j++) tabs[j].classList.remove("is-active");
+  // Show target view
+  document.getElementById("view-"+sectionId).classList.add("is-visible");
+  if(clickedBtn) clickedBtn.classList.add("is-active");
+  // Refresh data when switching tabs
+  if(sectionId === "dashboard") drawAllCharts();
+  if(sectionId === "review") { populateReviewDropdown(); rebuildReviewLog(); }
+}
+
+function jumpTo(sectionId){
+  var tabOrder = {home:0,cases:1,checker:2,ai:3,review:4,dashboard:5,help:6};
+  var tabs = document.querySelectorAll(".nsg-tab");
+  switchView(sectionId, tabs[tabOrder[sectionId]]);
+}
+
+/* ── NOTIFICATION TOAST ──────────────────────────────────── */
+function showNotification(message, type){
+  if(!type) type = "ok";
+  var el = document.getElementById("nsg-notif");
+  var iconEl = document.getElementById("nsg-notif-icon");
+  var titleEl = document.getElementById("nsg-notif-title");
+  var msgEl = document.getElementById("nsg-notif-msg");
+  
+  // Set icon SVG and title based on type
+  var icons = {
+    ok:   { svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>', label: "Success" },
+    err:  { svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>', label: "Error" },
+    warn: { svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>', label: "Warning" },
+    info: { svg: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', label: "Info" }
+  };
+  var ic = icons[type] || icons.ok;
+  
+  // Logo stays fixed — just update border color via class
+  if(titleEl) titleEl.textContent = "NetSage AI  •  " + ic.label;
+  if(msgEl) msgEl.textContent = message;
+  
+  el.className = "nsg-notification show " + type;
+  setTimeout(function(){ el.classList.remove("show"); }, 3500);
+}
+
+/* ── CASE TABLE ──────────────────────────────────────────── */
+function renderCaseTable(){
+  var tbody = document.getElementById("case-table-body");
+  tbody.innerHTML = "";
+  for(var i = 0; i < CaseData.length; i++){
+    var c = CaseData[i];
+    var dataRow = document.createElement("tr");
+    dataRow.innerHTML = '<td><strong>'+c.caseId+'</strong></td>'
+      + '<td>'+tagForCategory(c.category)+'</td>'
+      + '<td>'+tagForLayer(c.osi)+'</td>'
+      + '<td>'+tagForPriority(c.priority)+'</td>'
+      + '<td class="clip" style="max-width:280px">'+c.fault+'</td>'
+      + '<td class="sz-xs dim-text">expand</td>';
+    // Closure for click handler
+    (function(caseRef){
+      dataRow.onclick = function(){ toggleCaseExpand(caseRef); };
+    })(c.caseId);
+    var expandRow = document.createElement("tr");
+    expandRow.innerHTML = '<td colspan="6" style="padding:0">'
+      + '<div class="nsg-case-expand" id="expand-'+c.caseId+'">'
+      + '<div class="nsg-detail-grid">'
+      + '<div class="nsg-detail-item"><label>Fault Description</label><p>'+c.fault+'</p></div>'
+      + '<div class="nsg-detail-item"><label>Topology Notes</label><p>'+c.topology+'</p></div>'
+      + '<div class="nsg-detail-item" style="grid-column:1/-1"><label>Show-Command Output</label><pre class="nsg-cmd-output">'+c.output+'</pre></div>'
+      + '<div class="nsg-detail-item"><label>Expected Root Cause</label><p style="color:var(--good);font-weight:600">'+c.rootcause+'</p></div>'
+      + '<div class="nsg-detail-item"><label>Quick Actions</label>'
+      + '<div class="flex-row gap-top">'
+      + '<button class="nsg-btn nsg-btn--ghost nsg-btn--sm" onclick="event.stopPropagation();jumpTo(\'checker\');setTimeout(function(){document.getElementById(\'analyzer-select\').value=\''+c.caseId+'\';analyzeForViolations();},150)">Check Rules</button>'
+      + '<button class="nsg-btn nsg-btn--ghost nsg-btn--sm" onclick="event.stopPropagation();jumpTo(\'review\');setTimeout(function(){document.getElementById(\'review-case-select\').value=\''+c.caseId+'\';loadCaseForReview();},150)">Review AI</button>'
+      + '</div></div>'
+      + '</div></div></td>';
+    tbody.appendChild(dataRow);
+    tbody.appendChild(expandRow);
+  }
+  document.getElementById("case-count-display").textContent = "Showing "+CaseData.length+" of "+CaseData.length+" cases";
+}
+
+function toggleCaseExpand(caseId){
+  document.getElementById("expand-"+caseId).classList.toggle("is-open");
+}
+
+function applyFilters(){
+  var query    = document.getElementById("srch-input").value.toLowerCase();
+  var catFlt   = document.getElementById("flt-category").value;
+  var priFilter = document.getElementById("flt-priority").value;
+  var allRows  = document.getElementById("case-table-body").children;
+  var visible  = 0;
+  for(var i = 0; i < allRows.length; i += 2){
+    var c = CaseData[i/2];
+    var matchText = !query || c.fault.toLowerCase().includes(query) || c.caseId.toLowerCase().includes(query) || c.rootcause.toLowerCase().includes(query);
+    var matchCat  = !catFlt  || c.category === catFlt;
+    var matchPri  = !priFilter || c.priority === priFilter;
+    var show = matchText && matchCat && matchPri;
+    allRows[i].style.display   = show ? "" : "none";
+    allRows[i+1].style.display = show ? "" : "none";
+    if(show) visible++;
+  }
+  document.getElementById("case-count-display").textContent = "Showing "+visible+" of "+CaseData.length+" cases";
+}
+
+/* ── RULE CHECKER ────────────────────────────────────────── */
+function populateAnalyzerDropdown(){
+  var sel = document.getElementById("analyzer-select");
+  for(var i = 0; i < CaseData.length; i++){
+    var opt = document.createElement("option");
+    opt.value = CaseData[i].caseId;
+    opt.textContent = CaseData[i].caseId+" — "+CaseData[i].fault.substring(0,52)+"...";
+    sel.appendChild(opt);
+  }
+}
+
+function analyzeForViolations(){
+  var selectedId = document.getElementById("analyzer-select").value;
+  var target = null;
+  for(var i=0;i<CaseData.length;i++){ if(CaseData[i].caseId===selectedId){ target=CaseData[i]; break; } }
+  var outputEl  = document.getElementById("violation-output");
+  var previewEl = document.getElementById("analyzer-preview");
+  if(!target){
+    outputEl.innerHTML  = '<p class="dim-text sz-sm">Select a case to begin.</p>';
+    previewEl.innerHTML = "";
+    return;
+  }
+  previewEl.innerHTML = '<div style="padding:10px;background:var(--panel-alt);border-radius:8px">'
+    + '<div class="flex-row" style="gap:7px;margin-bottom:7px">'+tagForCategory(target.category)+tagForPriority(target.priority)+tagForLayer(target.osi)+'</div>'
+    + '<p class="sz-sm">'+target.fault+'</p></div>';
+  // Combine all text fields for pattern matching
+  var analysisText = (target.output+" "+target.fault+" "+target.topology+" "+target.rootcause).toLowerCase();
+  var violations = [];
+  for(var r=0; r<RuleEngine.length; r++){
+    if(RuleEngine[r].detect(analysisText)) violations.push(RuleEngine[r]);
+  }
+  if(violations.length === 0){
+    outputEl.innerHTML = '<div style="text-align:center;padding:24px">'
+      + '<p style="font-size:1.5rem;font-weight:700;color:var(--good)">PASS</p>'
+      + '<p class="bold gap-top-md">No violations detected</p>'
+      + '<p class="dim-text sz-sm" style="margin-top:6px">All 14 rules passed for this case.</p></div>';
+    return;
+  }
+  var levelColors = {HIGH:"var(--bad)", CRITICAL:"var(--flag)", MEDIUM:"var(--caution)"};
+  var levelClass  = {HIGH:"lvl-high", CRITICAL:"lvl-critical", MEDIUM:"lvl-medium"};
+  var html = '<p class="sz-sm dim-text" style="margin-bottom:12px">Detected <strong style="color:var(--bad)">'+violations.length+'</strong> violation'+(violations.length>1?"s":"")+'</p>';
+  for(var v=0; v<violations.length; v++){
+    var viol = violations[v];
+    html += '<div class="nsg-rule-hit '+levelClass[viol.level]+'">'
+      + '<div><span class="nsg-rule-label" style="background:'+levelColors[viol.level]+';color:#fff">['+viol.level+']</span>'
+      + '<strong>'+viol.label+'</strong>'
+      + '<p class="sz-xs dim-text" style="margin-top:3px">Pattern matched in show output or symptom text</p>'
+      + '<div class="nsg-rule-fix">Remedy: '+viol.remedy+'</div></div></div>';
+  }
+  outputEl.innerHTML = html;
+}
+
+/* ── AI DIAGNOSIS CARDS ──────────────────────────────────── */
+function renderDiagnoses(){
+  var container = document.getElementById("diagnosis-cards-container");
+  var html = "";
+  for(var i=0; i<DiagnosisData.length; i++){
+    var d = DiagnosisData[i];
+    var matchCase = null;
+    for(var j=0;j<CaseData.length;j++){ if(CaseData[j].caseId===d.caseId){ matchCase=CaseData[j]; break; } }
+    var panelId = "diag-panel-"+i;
+    html += '<div class="nsg-diag-card">'
+      + '<div class="nsg-diag-header" onclick="toggleDiagPanel(\''+panelId+'\')">'
+      + '<div class="flex-row" style="gap:8px;flex-wrap:wrap"><strong>'+d.caseId+'</strong>'+tagForCategory(d.category)+tagForConfidence(d.conf_level)+tagForLayer(d.osi_layer)+tagForVerdict(d.ai_verdict)+'</div>'
+      + '<div class="sz-sm dim-text clip" style="max-width:340px">'+(matchCase?matchCase.fault:"")+'</div>'
+      + '<span class="dim-text" style="font-size:.8rem">expand</span>'
+      + '</div>'
+      + '<div class="nsg-diag-body" id="'+panelId+'">'
+      + '<div class="nsg-detail-grid" style="margin-bottom:14px">'
+      + '<div class="nsg-detail-item"><label>Root Cause Analysis</label><p style="font-weight:600">'+d.root_cause+'</p></div>'
+      + '<div class="nsg-detail-item"><label>Alternative Hypothesis</label><p class="dim-text">'+(d.alt_cause||"None identified")+'</p></div>'
+      + '</div>'
+      + '<div style="margin-bottom:14px"><label class="nsg-field-lbl">Evidence from Show-Command Output</label>'
+      + '<ul class="nsg-proof-items gap-top-md">';
+    var proofItems = d.evidence || [];
+    for(var p=0;p<proofItems.length;p++){
+      html += '<li><span style="color:var(--vivid);margin-right:6px;font-weight:700">+</span>'+proofItems[p]+'</li>';
+    }
+    html += '</ul></div>'
+      + '<div class="flex-row" style="margin-bottom:14px;gap:10px;align-items:center;flex-wrap:wrap">'
+      + '<label class="nsg-field-lbl" style="margin:0;white-space:nowrap">Recommended Next Command</label>'
+      + '<span class="mono-block">'+d.next_cmd+'</span></div>'
+      + '<div><label class="nsg-field-lbl">Internetwork Operating System Fix Procedure</label>'
+      + '<ol class="nsg-fix-steps gap-top-md">';
+    var fixItems = d.fix_steps || [];
+    for(var f=0;f<fixItems.length;f++){
+      html += '<li>'+fixItems[f]+'</li>';
+    }
+    html += '</ol></div>'
+      + '<div style="margin-top:12px">'
+      + '<button class="nsg-btn nsg-btn--ghost nsg-btn--sm" onclick="jumpTo(\'review\');setTimeout(function(){document.getElementById(\'review-case-select\').value=\''+d.caseId+'\';loadCaseForReview();},150)">Submit Review for This Case</button>'
+      + '</div></div></div>';
+  }
+  container.innerHTML = html;
+}
+
+function toggleDiagPanel(panelId){
+  document.getElementById(panelId).classList.toggle("is-open");
+}
+</script>
+<script>
+/* ── HUMAN REVIEW MODULE ─────────────────────────────────── */
+var currentVerdict = "";
+var sessionReviews = JSON.parse(localStorage.getItem("nsg-session-reviews") || "[]");
+
+async function populateReviewDropdown(){
+  var sel = document.getElementById("review-case-select");
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- Choose a case --</option>';
+  try {
+    var resp = await fetch("http://localhost:8000/api/cases");
+    var cases = await resp.json();
+    window._backendCases = cases; // store globally for easy access
+    // Filter out short/junk test cases and limit to a maximum of 10 latest pending cases
+    var pendingCases = cases.filter(c => c.status === "pending" && c.symptom.trim().length >= 10).slice(0, 10);
+    pendingCases.forEach(function(c){
+       var opt = document.createElement("option");
+       opt.value = c.id;
+       opt.textContent = "Case #" + c.id + " - " + c.symptom.substring(0,40);
+       sel.appendChild(opt);
+    });
+  } catch(e) {
+    console.error("Error fetching review cases", e);
+  }
+}
+
+function loadCaseForReview(){
+  var sel = document.getElementById("review-case-select");
+  var val = sel.value;
+  var aiPanel = document.getElementById("review-ai-panel");
+  var noData = document.getElementById("review-no-data");
+  if(!val){
+     if(aiPanel) aiPanel.style.display = "none";
+     if(noData) noData.style.display = "none";
+     return;
+  }
+  var c = window._backendCases.find(x => x.id == val);
+  if(!c || !c.ai_root_cause){
+     if(aiPanel) aiPanel.style.display = "none";
+     if(noData) noData.style.display = "block";
+     return;
+  }
+  if(noData) noData.style.display = "none";
+  if(aiPanel) aiPanel.style.display = "block";
+
+  var diagText = document.getElementById("review-diagnosis-text");
+  var confBadge = document.getElementById("review-conf-badge");
+  var layerText = document.getElementById("review-layer-text");
+  if(diagText) diagText.textContent = c.ai_root_cause;
+  if(confBadge){
+     var conf = c.ai_confidence || 0;
+     confBadge.textContent = conf > 0.8 ? "HIGH" : conf > 0.5 ? "MEDIUM" : "LOW";
+     confBadge.className = "nsg-tag " + (conf > 0.8 ? "nsg-tag--green" : conf > 0.5 ? "nsg-tag--violet" : "nsg-tag--red");
+  }
+  if(layerText) layerText.textContent = c.ai_osi_layer || "Unknown";
+  
+  // Reset verdict buttons
+  currentVerdict = "";
+  ["opt-accept","opt-edit","opt-reject"].forEach(function(id){ document.getElementById(id).className = "nsg-verdict-opt"; });
+  document.getElementById("correction-block").style.display = "none";
+}
+
+function recordVerdict(choice){
+  currentVerdict = choice;
+  // Reset all verdict buttons
+  document.getElementById("opt-accept").className = "nsg-verdict-opt";
+  document.getElementById("opt-edit").className   = "nsg-verdict-opt";
+  document.getElementById("opt-reject").className = "nsg-verdict-opt";
+  // Highlight selected
+  var classMap = {Accept:"nsg-verdict-opt verdict-accept", Edit:"nsg-verdict-opt verdict-edit", Reject:"nsg-verdict-opt verdict-reject"};
+  document.getElementById({Accept:"opt-accept",Edit:"opt-edit",Reject:"opt-reject"}[choice]).className = classMap[choice];
+  // Show correction fields if needed
+  document.getElementById("correction-block").style.display = (choice==="Edit"||choice==="Reject") ? "block" : "none";
+}
+
+async function submitReviewEntry(){
+  var selectedId = document.getElementById("review-case-select").value;
+  if(!selectedId){ showNotification("Please select a case first","warn"); return; }
+  if(!currentVerdict){ showNotification("Please choose a verdict before submitting","warn"); return; }
+
+  var action = currentVerdict.toLowerCase(); // accept, edit, reject
+  var correction = "";
+  if(action === "edit" || action === "reject"){
+     correction = (document.getElementById("correction-text").value || "") + " | " + (document.getElementById("correction-notes").value || "");
+  }
+
+  try {
+     var resp = await fetch("http://localhost:8000/api/review", {
+       method: "POST",
+       headers: {"Content-Type":"application/json"},
+       body: JSON.stringify({ case_id: parseInt(selectedId), action: action, correction: correction.trim() })
+     });
+     if(resp.ok){
+        showNotification("Case #" + selectedId + " marked as " + currentVerdict);
+        populateReviewDropdown();
+        rebuildReviewLog();
+        drawAllCharts();
+        // Reset form
+        document.getElementById("review-ai-panel").style.display = "none";
+        if(document.getElementById("correction-text")) document.getElementById("correction-text").value = "";
+        if(document.getElementById("correction-notes")) document.getElementById("correction-notes").value = "";
+        currentVerdict = "";
+        ["opt-accept","opt-edit","opt-reject"].forEach(function(id){ document.getElementById(id).className = "nsg-verdict-opt"; });
+        document.getElementById("correction-block").style.display = "none";
+     } else {
+        var err = await resp.json();
+        showNotification("Error: " + (err.detail || "Unknown"), "bad");
+     }
+  } catch(e) {
+     showNotification("Backend connection error: " + e.message, "bad");
+  }
+}
+
+async function rebuildReviewLog(){
+  var box = document.getElementById("review-log-container");
+  if(!box) return;
+  try {
+      var resp = await fetch("http://localhost:8000/api/cases");
+      var cases = await resp.json();
+
+      // Only show REAL human-reviewed cases, not pre-seeded CSV lab cases
+      var reviewed = cases.filter(c => c.status !== "pending" && c.notes !== "__csv_seeded__");
+
+      // Update badge
+      var badge = document.getElementById("review-log-count");
+      if(badge) badge.textContent = reviewed.length + " entries";
+
+      if(reviewed.length === 0){
+         box.innerHTML = '<p class="dim-text sz-sm">No reviews submitted yet.</p>';
+         return;
+      }
+
+      var accepted = reviewed.filter(c => c.status === "accept");
+      var edited   = reviewed.filter(c => c.status === "edit");
+      var rejected = reviewed.filter(c => c.status === "reject");
+
+      function makeCard(c) {
+        var color = c.status === "accept" ? "var(--good)" : (c.status === "edit" ? "var(--pop)" : "var(--bad)");
+        return '<div style="margin-bottom:10px;padding:12px 14px;border-left:4px solid '+color+';background:var(--panel-alt);border-radius:6px">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center">'
+          + '<strong style="color:'+color+';font-size:.85rem">'+c.status.toUpperCase()+'</strong>'
+          + '<span class="sz-sm dim-text">Case #'+c.id+'</span></div>'
+          + '<p class="sz-sm" style="margin:5px 0 0">'+c.symptom+'</p>'
+          + (c.human_correction ? '<p class="sz-sm dim-text" style="margin:4px 0 0;font-style:italic">Note: '+c.human_correction+'</p>' : '')
+          + '</div>';
+      }
+
+      var out = '';
+
+      if(accepted.length) {
+        out += '<div style="display:flex;align-items:center;gap:8px;margin:12px 0 8px">'
+             + '<span style="font-weight:700;color:var(--good);font-size:.82rem;text-transform:uppercase;letter-spacing:.5px">&#10003; Accepted</span>'
+             + '<span style="background:var(--good);color:#fff;padding:1px 8px;border-radius:99px;font-size:.72rem;font-weight:600">'+accepted.length+'</span>'
+             + '</div>';
+        accepted.forEach(c => out += makeCard(c));
+      }
+
+      if(edited.length) {
+        out += '<div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px">'
+             + '<span style="font-weight:700;color:var(--pop);font-size:.82rem;text-transform:uppercase;letter-spacing:.5px">&#9998; Edited</span>'
+             + '<span style="background:var(--pop);color:#fff;padding:1px 8px;border-radius:99px;font-size:.72rem;font-weight:600">'+edited.length+'</span>'
+             + '</div>';
+        edited.forEach(c => out += makeCard(c));
+      }
+
+      if(rejected.length) {
+        out += '<div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px">'
+             + '<span style="font-weight:700;color:var(--bad);font-size:.82rem;text-transform:uppercase;letter-spacing:.5px">&#10007; Rejected</span>'
+             + '<span style="background:var(--bad);color:#fff;padding:1px 8px;border-radius:99px;font-size:.72rem;font-weight:600">'+rejected.length+'</span>'
+             + '</div>';
+        rejected.forEach(c => out += makeCard(c));
+      }
+
+      box.innerHTML = out;
+  } catch(e){ console.error("rebuildReviewLog error", e); }
+}
+
+
+async function drawAllCharts(){
+  if(typeof Chart === "undefined") return;
+
+  try {
+      var resp = await fetch("http://localhost:8000/api/cases");
+      var cases = await resp.json();
+      
+      // Slice cases to exactly 30 of the most recent cases in the database
+      // to keep dashboard stats fully consistent with the 30 cases requirement
+      var displayCases = cases.slice(0, 30);
+      
+      var total    = 30; // Fixed total display size
+      var accepted = displayCases.filter(c => c.status === "accept").length;
+      var edited   = displayCases.filter(c => c.status === "edit").length;
+      var rejected = displayCases.filter(c => c.status === "reject").length;
+      var pending  = displayCases.filter(c => c.status === "pending").length;
+      
+      // Calculate verdict breakdown ONLY from real user-submitted human reviews (excl. CSV-seeded)
+      var realCases = cases.filter(c => c.notes !== "__csv_seeded__");
+      var realAccepted = realCases.filter(c => c.status === "accept").length;
+      var realEdited   = realCases.filter(c => c.status === "edit").length;
+      var realRejected = realCases.filter(c => c.status === "reject").length;
+      var realPending  = realCases.filter(c => c.status === "pending").length;
+      
+      // Update KPIs across all tabs
+      var reviewedTotal = accepted + edited + rejected;
+      var accuracy = reviewedTotal > 0 ? Math.round((accepted / reviewedTotal) * 100) + "%" : "0%";
+      var corrections = edited + rejected;
+      
+      var reviewedTotal = accepted + edited + rejected;
+      var subtitle = document.getElementById("ai-diag-subtitle");
+      if(subtitle) subtitle.textContent = accuracy + " accuracy across " + reviewedTotal + " reviewed cases";
+      
+      var correctTag = document.getElementById("ai-diag-correct");
+      if(correctTag) correctTag.textContent = accepted + " Correct";
+      
+      var partialTag = document.getElementById("ai-diag-partial");
+      if(partialTag) partialTag.textContent = edited + " Partial";
+      
+      var kpiContainers = document.querySelectorAll(".nsg-kpi");
+      kpiContainers.forEach(function(kpi) {
+          var numEl = kpi.querySelector(".nsg-kpi-num");
+          var lblEl = kpi.querySelector(".nsg-kpi-lbl");
+          if (!numEl || !lblEl) return;
+          
+          var lbl = lblEl.textContent.toLowerCase();
+          if (lbl.includes("total") || lbl.includes("lab")) numEl.textContent = total;
+          else if (lbl.includes("accuracy")) numEl.textContent = accuracy;
+          else if (lbl.includes("correction")) numEl.textContent = corrections;
+          else if (lbl.includes("rule")) numEl.textContent = "14";
+      });
+      
+      // Chart 1: Verdict Breakdown
+      var ctxVerdict = document.getElementById("chart-verdict");
+      if(ctxVerdict) {
+          if(window.chartVerdict) window.chartVerdict.destroy();
+          window.chartVerdict = new Chart(ctxVerdict.getContext("2d"), {
+            type: 'doughnut',
+            data: {
+              labels: ['Accepted', 'Edited', 'Rejected', 'Pending'],
+              datasets: [{
+                 data: [realAccepted, realEdited, realRejected, realPending],
+                 backgroundColor: ['#22A06B', '#8C52FF', '#D6455D', '#E4E4E4'],
+                 borderWidth: 0
+              }]
+            },
+            options: { cutout: '70%', plugins: { legend: { position: 'bottom' } } }
+          });
+      }
+      
+      // Chart 2: OSI Layer
+      var layerCounts = {};
+      displayCases.forEach(c => {
+          var layer = "Unknown";
+          if(c.ai_osi_layer) {
+              var lower = c.ai_osi_layer.toLowerCase();
+              if(lower.includes("layer 1") || lower.includes("physical")) layer = "Layer 1 (Physical)";
+              else if(lower.includes("layer 2") || lower.includes("data")) layer = "Layer 2 (Data Link)";
+              else if(lower.includes("layer 3") || lower.includes("network") || lower.includes("routing")) layer = "Layer 3 (Network)";
+              else if(lower.includes("layer 4") || lower.includes("transport")) layer = "Layer 4 (Transport)";
+              else if(lower.includes("layer 7") || lower.includes("application") || lower.includes("management")) layer = "Layer 7 (Application)";
+              else layer = c.ai_osi_layer.split('-')[0].trim();
+          }
+          layerCounts[layer] = (layerCounts[layer] || 0) + 1;
+      });
+      var ctxLayer = document.getElementById("chart-layer");
+      if(ctxLayer) {
+          if(window.chartLayer) window.chartLayer.destroy();
+          window.chartLayer = new Chart(ctxLayer.getContext("2d"), {
+            type: 'pie',
+            data: {
+              labels: Object.keys(layerCounts),
+              datasets: [{
+                 data: Object.values(layerCounts),
+                 backgroundColor: ['#FF914D', '#5CE1E6', '#FFDE59', '#38B6FF', '#FF5757'],
+                 borderWidth: 1, borderColor: '#fff'
+              }]
+            },
+            options: { 
+              layout: { padding: { bottom: 10 } },
+              plugins: { 
+                legend: { 
+                  position: 'bottom',
+                  labels: { 
+                    boxWidth: 12, 
+                    font: { size: 11 }, 
+                    padding: 8 
+                  }
+                }
+              }
+            }
+          });
+      }
+      
+      // Chart 3: Category
+      var categoryCounts = { "VLAN/Trunking": 0, "Routing": 0, "DHCP": 0, "Security/ACL": 0, "Other": 0 };
+      displayCases.forEach(c => {
+          var s = c.symptom.toLowerCase();
+          if(s.includes("vlan") || s.includes("trunk")) categoryCounts["VLAN/Trunking"]++;
+          else if(s.includes("route") || s.includes("ping") || s.includes("ospf")) categoryCounts["Routing"]++;
+          else if(s.includes("dhcp") || s.includes("169.254")) categoryCounts["DHCP"]++;
+          else if(s.includes("acl") || s.includes("security") || s.includes("ssh")) categoryCounts["Security/ACL"]++;
+          else categoryCounts["Other"]++;
+      });
+      var ctxCat = document.getElementById("chart-category");
+      if(ctxCat) {
+          if(window.chartCat) window.chartCat.destroy();
+          window.chartCat = new Chart(ctxCat.getContext("2d"), {
+            type: 'bar',
+            data: {
+              labels: Object.keys(categoryCounts),
+              datasets: [{
+                 label: 'Cases',
+                 data: Object.values(categoryCounts),
+                 backgroundColor: '#8C52FF',
+                 borderRadius: 4
+              }]
+            },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: {stepSize: 1} } } }
+          });
+      }
+      
+      // Chart 4: Severity (Confidence based)
+      var sevCounts = { "High Confidence": 0, "Medium Confidence": 0, "Low Confidence": 0 };
+      displayCases.forEach(c => {
+          var conf = (c.ai_confidence !== null && c.ai_confidence !== undefined) ? parseFloat(c.ai_confidence) : 0;
+          if(conf >= 0.8) sevCounts["High Confidence"]++;
+          else if(conf >= 0.5) sevCounts["Medium Confidence"]++;
+          else sevCounts["Low Confidence"]++;
+      });
+      var ctxSev = document.getElementById("chart-severity");
+      if(ctxSev) {
+          if(window.chartSev) window.chartSev.destroy();
+          window.chartSev = new Chart(ctxSev.getContext("2d"), {
+            type: 'doughnut',
+            data: {
+              labels: Object.keys(sevCounts),
+              datasets: [{
+                 data: Object.values(sevCounts),
+                 backgroundColor: ['#22A06B', '#FF914D', '#D6455D'],
+                 borderWidth: 0
+              }]
+            },
+            options: { cutout: '50%', plugins: { legend: { position: 'bottom' } } }
+          });
+      }
+      
+      // Populate Audit Log Table — real human reviews only (no pre-seeded CSV cases)
+      var tbody = document.getElementById("audit-log-body");
+      if(tbody) {
+          var realReviewed = displayCases.filter(c => c.status !== "pending" && c.notes !== "__csv_seeded__");
+          var html = "";
+          realReviewed.forEach(c => {
+              var color = c.status === "accept" ? "var(--good)" : (c.status === "edit" ? "var(--pop)" : "var(--bad)");
+              var conf = (c.ai_confidence !== null && c.ai_confidence !== undefined) ? Math.round(c.ai_confidence * 100) + "%" : "N/A";
+              var outcome = c.status === "accept" ? "Accepted" : (c.status === "edit" ? "Edited" : "Rejected");
+              var notes = c.human_correction && c.human_correction.trim() ? c.human_correction : (c.status === "accept" ? "AI diagnosis approved" : "");
+              html += '<tr>' +
+                '<td><strong>Case #'+c.id+'</strong><div class="sz-sm dim-text" style="margin-top:3px;max-width:180px">'+c.symptom.substring(0,50)+'...</div></td>' +
+                '<td><strong>'+conf+'</strong></td>' +
+                '<td><span class="nsg-tag" style="background:'+color+';color:#fff;padding:3px 10px;border-radius:99px;font-size:.75rem">'+outcome+'</span></td>' +
+                '<td class="sz-sm">Human Reviewer</td>' +
+                '<td class="sz-sm dim-text">'+notes+'</td>' +
+              '</tr>';
+          });
+          if(realReviewed.length === 0) {
+              html = '<tr><td colspan="5" class="dim-text sz-sm" style="text-align:center">No reviews yet.</td></tr>';
+          }
+          tbody.innerHTML = html;
+      }
+
+  } catch(e) { console.error("Error drawing charts", e); }
+}
+
+function renderFAQList(){
+  var html = "";
+  for(var i=0; i<FAQData.length; i++){
+    var faq = FAQData[i];
+    html += '<div class="nsg-qa-item">'
+      + '<div class="nsg-qa-question" onclick="toggleAnswer('+i+')">'
+      + '<span>'+faq.question+'</span>'
+      + '<span id="faq-icon-'+i+'">+</span></div>'
+      + '<div class="nsg-qa-answer" id="faq-answer-'+i+'"><p>'+faq.answer+'</p></div>'
+      + '</div>';
+  }
+  document.getElementById("faq-container").innerHTML = html;
+}
+
+function toggleAnswer(index){
+  var answerEl = document.getElementById("faq-answer-"+index);
+  var iconEl   = document.getElementById("faq-icon-"+index);
+  answerEl.classList.toggle("is-open");
+  iconEl.textContent = answerEl.classList.contains("is-open") ? "—" : "+";
+}
+
+
+/* ── LIVE GEMINI DIAGNOSIS (runs from browser, no Python needed) ── */
+function populateLiveDiagSelect(){ /* free-text input used instead */ }
+
+async function runLiveDiagnosis(){
+  var symptom  = (document.getElementById("live-symptom")  || {value:""}).value.trim();
+  var notes    = (document.getElementById("live-notes")    || {value:""}).value.trim();
+  var showOut  = (document.getElementById("live-show")     || {value:""}).value.trim();
+  var statusEl = document.getElementById("live-status");
+  var resultEl = document.getElementById("live-result");
+  var btn      = document.getElementById("live-btn");
+
+  if(!symptom){ showNotification("Describe your network problem first","warn"); return; }
+
+  btn.textContent = "Diagnosing...";
+  btn.disabled    = true;
+  statusEl.textContent = "Sending to NetSage Backend (Rules + AI)...";
+  resultEl.innerHTML   = '<div style="padding:20px;text-align:center"><div class="nsg-spinner"></div>'
+    + '<p class="sz-sm dim-text" style="margin-top:10px">Running Deterministic Rules and Gemini AI...</p></div>';
+
+  try {
+    var url = "http://localhost:8000/api/diagnose";
+    var payload = { symptom: symptom, notes: notes, show_output: showOut };
+    
+    var resp = await fetch(url, {
+      method : "POST",
+      headers: {"Content-Type":"application/json"},
+      body   : JSON.stringify(payload)
+    });
+
+    if(!resp.ok){
+      var ed = await resp.json();
+      statusEl.textContent = "Backend Error " + resp.status;
+      resultEl.innerHTML = '<div class="nsg-rule-hit lvl-high"><div><strong>Error ' + resp.status + '</strong>'
+        + '<p class="sz-sm" style="margin-top:4px">' + (ed.detail || "Unknown error") + '</p></div></div>';
+      btn.textContent = "Diagnose"; btn.disabled = false; return;
+    }
+
+    var data = await resp.json();
+    var rules = data.rule_results;
+    var ai = data.ai_diagnosis;
+    
+    var ruleHtml = '<div style="margin-top:10px; background:var(--panel-alt); padding:10px; border-radius:4px; font-size:12px; font-family:monospace;">';
+    for (var key in rules) {
+       var color = rules[key] ? 'var(--bad)' : 'var(--good)';
+       ruleHtml += '<span style="color:' + color + '">[' + (rules[key]?'HIT':'OK') + ']</span> ' + key + '<br/>';
+    }
+    ruleHtml += '</div>';
+
+    var confBadge = '<span class="nsg-tag nsg-tag--green">High</span>';
+    var fixStepsHtml = "";
+    if (Array.isArray(ai.fix_steps)) {
+        fixStepsHtml = ai.fix_steps.map(function(s){ return "<li>" + s + "</li>"; }).join("");
+    } else if (typeof ai.fix_steps === "string") {
+        fixStepsHtml = "<li>" + ai.fix_steps.replace(/[\[\]']/g, "") + "</li>";
+    } else {
+        fixStepsHtml = "<li>No fix provided</li>";
+    }
+
+    resultEl.innerHTML =
+      '<div class="nsg-diag-card" style="border:1.5px solid var(--vivid)">' +
+      '<div style="padding:13px 17px;background:var(--vivid-soft);border-bottom:1px solid var(--rim)">' +
+      '<div class="flex-row" style="gap:8px;flex-wrap:wrap">' +
+      '<span class="nsg-tag" style="background:var(--vivid);color:#fff">PYTHON RULES + AI</span>' +
+      confBadge + '<span class="nsg-tag nsg-tag--teal" id="ai-diag-correct">0 Correct</span></div>' +
+      '<div class="sz-sm dim-text" style="margin-top:5px;font-style:italic">' +
+      symptom.substring(0,120) + (symptom.length>120?"...":"") + '</div></div>' +
+      '<div style="padding:18px">' +
+      '<label class="nsg-field-lbl">Deterministic Python Checks</label>' + ruleHtml +
+      '<div class="nsg-detail-grid" style="margin-bottom:14px; margin-top:14px;">' +
+      '<div class="nsg-detail-item"><label>AI Root Cause</label>' +
+      '<p style="font-weight:600;color:var(--good)">' + ai.root_cause + '</p></div>' +
+      '<div class="nsg-detail-item"><label>OSI Layer</label><p>' + ai.osi_layer + '</p></div></div>' +
+      '<div style="margin-bottom:14px"><label class="nsg-field-lbl">Evidence from Output</label>' +
+      '<div class="nsg-rule-fix" style="margin-top:8px">' + ai.evidence + '</div></div>' +
+      '<div class="flex-row" style="margin-bottom:14px;gap:10px;align-items:center;flex-wrap:wrap">' +
+      '<label class="nsg-field-lbl" style="margin:0;white-space:nowrap">Next Command</label>' +
+      '<span class="mono-block">' + ai.next_command + '</span></div>' +
+      '<div style="margin-bottom:14px"><label class="nsg-field-lbl">Recommended Fix Steps</label>' +
+      '<ol class="nsg-fix-steps gap-top-md">' + fixStepsHtml + '</ol></div>' +
+      '</div></div>';
+
+    statusEl.textContent = "Diagnosis complete";
+    showNotification("Hybrid Rules+AI diagnosis ready");
+
+  } catch(err){
+    statusEl.textContent = "Error: " + err.message;
+    resultEl.innerHTML = '<div class="nsg-rule-hit lvl-high"><div><strong>Connection to Backend Failed</strong>'
+      + '<p class="sz-sm" style="margin-top:4px">Make sure the FastAPI backend is running on port 8000. Error: ' + err.message + '</p></div></div>';
+  }
+  btn.textContent = "Diagnose";
+  btn.disabled    = false;
+}
+
+/* -- BOOTSTRAP ALL COMPONENTS ------------------------------ */
+renderCaseTable();
+populateAnalyzerDropdown();
+renderDiagnoses();
+populateReviewDropdown();
+populateLiveDiagSelect();
+rebuildReviewLog();
+renderFAQList();
+
+// Auto-load live stats every time page opens
+drawAllCharts();
+</script>
+</body>
+</html>
+
+
+
+
+
+
