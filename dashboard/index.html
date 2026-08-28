@@ -938,7 +938,7 @@ async function populateReviewDropdown(){
   if(!sel) return;
   sel.innerHTML = '<option value="">-- Choose a case --</option>';
   try {
-    var resp = await fetch("http://localhost:8000/api/cases");
+    var resp = await fetch("https://netsage-ai-backend-8aav.onrender.com/api/cases");
     var cases = await resp.json();
     window._backendCases = cases; // store globally for easy access
     // Filter out short/junk test cases and limit to a maximum of 10 latest pending cases
@@ -1015,7 +1015,7 @@ async function submitReviewEntry(){
   }
 
   try {
-     var resp = await fetch("http://localhost:8000/api/review", {
+     var resp = await fetch("https://netsage-ai-backend-8aav.onrender.com/api/review", {
        method: "POST",
        headers: {"Content-Type":"application/json"},
        body: JSON.stringify({ case_id: parseInt(selectedId), action: action, correction: correction.trim() })
@@ -1045,7 +1045,7 @@ async function rebuildReviewLog(){
   var box = document.getElementById("review-log-container");
   if(!box) return;
   try {
-      var resp = await fetch("http://localhost:8000/api/cases");
+      var resp = await fetch("https://netsage-ai-backend-8aav.onrender.com/api/cases");
       var cases = await resp.json();
 
       // Only show REAL human-reviewed cases, not pre-seeded CSV lab cases
@@ -1110,7 +1110,7 @@ async function drawAllCharts(){
   if(typeof Chart === "undefined") return;
 
   try {
-      var resp = await fetch("http://localhost:8000/api/cases");
+      var resp = await fetch("https://netsage-ai-backend-8aav.onrender.com/api/cases");
       var cases = await resp.json();
       
       // Slice cases to exactly 30 of the most recent cases in the database
@@ -1342,7 +1342,7 @@ async function runLiveDiagnosis(){
     + '<p class="sz-sm dim-text" style="margin-top:10px">Running Deterministic Rules and Gemini AI...</p></div>';
 
   try {
-    var url = "http://localhost:8000/api/diagnose";
+    var url = "https://netsage-ai-backend-8aav.onrender.com/api/diagnose";
     var payload = { symptom: symptom, notes: notes, show_output: showOut };
     
     var resp = await fetch(url, {
