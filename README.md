@@ -1,94 +1,126 @@
-NetSage AI
+# 🌐 NetSage AI
 
-NetSage AI is a web-based tool for troubleshooting Cisco Packet Tracer
-network problems. It takes a network symptom, Packet Tracer notes, and
-Cisco show command output and uses a combination of Python-based
-checks and Google Gemini to suggest the possible cause and fix.
+> **AI-assisted Cisco Packet Tracer troubleshooting with deterministic rules, Gemini analysis, and human review.**
 
-The main idea is simple: let the system help with the diagnosis, but
-keep a human involved before the result is finalized.
+NetSage AI is a web-based network troubleshooting assistant built for **Cisco Packet Tracer labs**.
 
-Live Website
+Instead of manually going through configuration output, IP addresses, interfaces, routing information, and other command results, you can give NetSage AI the problem description and available `show` command output. The system combines **Python-based troubleshooting rules** with **Google Gemini** to identify possible causes and suggest a practical fix.
 
-You can try the working project here:
+The important part is that **AI does not get the final say**.
 
-https://netsage-ai-arnav.netlify.app/
+A human reviewer can accept, edit, or reject the generated diagnosis before it becomes a recorded result.
 
-What the Project Does
+---
 
-When a user enters a network problem, NetSage AI:
+## 🚀 Live Demo
 
-Takes the network symptom and available Cisco command output.
+### Try NetSage AI
 
-Checks the information against predefined Python troubleshooting
-rules.
+**🌎 [Open the Live Website](https://netsage-ai-arnav.netlify.app/)**
 
-Sends the relevant information to Gemini for additional analysis.
+The frontend is currently hosted on **Netlify**.
 
-Combines the results into a diagnosis with supporting evidence and a
-suggested fix.
+---
 
-Allows a human reviewer to accept, edit, or reject the diagnosis.
+## 💡 Why NetSage AI?
 
-Stores the review information so it can be viewed through the
-dashboard.
+Troubleshooting a Cisco Packet Tracer network is often less about knowing one command and more about connecting several pieces of information.
 
-This makes the project useful for learning and experimenting with
-AI-assisted network troubleshooting without removing human judgment from
-the process.
+For example:
 
-How It Works
+* Is an interface administratively down?
+* Is the IP address incorrect?
+* Is a VLAN missing?
+* Is a routing entry unavailable?
+* Is a subnet configured incorrectly?
+* Is the command output pointing toward another issue?
 
-User
-  |
-  v
-Network Symptom + Packet Tracer Notes + Show Commands
-  |
-  v
-FastAPI Backend
-  |
-  +--------------------+
-  |                    |
-  v                    v
-Python Rule Checker   Gemini AI
-  |                    |
-  +---------+----------+
-            |
-            v
-     Diagnosis + Evidence + Fix
-            |
-            v
-       Human Review
-       /     |      \
-   Accept   Edit   Reject
-       \     |      /
-            v
-        Dashboard
+NetSage AI brings these inputs together and gives the user an initial diagnosis instead of making them manually inspect everything from scratch.
 
-Main Features
+The goal is not to replace the network engineer.
 
-Network fault diagnosis for Cisco Packet Tracer labs
+**The goal is to give the engineer a useful starting point.**
 
-Python-based deterministic checks for common Cisco issues
+---
 
-Gemini AI for additional analysis and explanation
+# 🔍 How It Works
 
-Human review of AI-generated results
+```text
+             👤 User
+                │
+                ▼
+      Network Symptom
+      Packet Tracer Notes
+      Cisco Show Commands
+                │
+                ▼
+        ┌─────────────────┐
+        │   FastAPI API   │
+        └────────┬────────┘
+                 │
+        ┌────────┴────────┐
+        ▼                 ▼
+┌───────────────┐  ┌───────────────┐
+│ Python Rules  │  │  Gemini AI    │
+│ Deterministic │  │ AI Analysis   │
+└───────┬───────┘  └───────┬───────┘
+        │                  │
+        └────────┬─────────┘
+                 ▼
+       Diagnosis + Evidence
+              + Fix
+                 │
+                 ▼
+        👨‍💻 Human Review
+                 │
+       ┌─────────┼─────────┐
+       ▼         ▼         ▼
+    ✅ Accept   ✏️ Edit   ❌ Reject
+       │         │         │
+       └─────────┼─────────┘
+                 ▼
+             Dashboard
+```
 
-Accept, Edit, and Reject workflow
+---
 
-Dashboard showing diagnostic statistics
+# ✨ Features
 
-30 predefined troubleshooting cases
+### 🧠 AI-Assisted Diagnosis
 
-AI review and correction logging
+Uses Google Gemini to analyze the provided network information and generate a possible diagnosis with explanation and suggested remediation.
 
-REST API built with FastAPI
+### 🐍 Deterministic Python Rules
 
-Simple browser-based frontend
+Known Cisco troubleshooting conditions are checked using predefined Python logic and regular expressions.
 
-Project Structure
+This gives the system a predictable layer instead of depending entirely on an AI response.
 
+### 👨‍💻 Human-in-the-Loop Review
+
+Every generated diagnosis can be reviewed by a person.
+
+**Accept →** Diagnosis is correct
+**Edit →** Diagnosis needs correction
+**Reject →** Diagnosis is not useful or correct
+
+### 📊 Dashboard
+
+The dashboard provides a quick overview of diagnostic activity, including review outcomes and case distribution.
+
+### 🧪 30 Troubleshooting Cases
+
+The project includes **30 predefined Cisco Packet Tracer troubleshooting scenarios** that can be used to test and demonstrate the system.
+
+### 🔌 REST API
+
+The backend exposes REST API endpoints through FastAPI, making the diagnosis and review workflow easy to integrate with the frontend.
+
+---
+
+# 🏗️ Project Structure
+
+```text
 NetSage_AI/
 │
 ├── dashboard/
@@ -107,205 +139,275 @@ NetSage_AI/
 │   └── responsible_ai_log.csv
 │
 └── README.md
+```
 
-What the important files do
+---
 
-dashboard/index.html
-Contains the web interface for diagnosis, cases, review, and dashboard
-pages.
+# 📁 Important Files
 
-backend/main.py
-Runs the FastAPI application and provides the API endpoints.
+| File                          | Purpose                                                    |
+| ----------------------------- | ---------------------------------------------------------- |
+| `dashboard/index.html`        | Web interface for diagnosis, cases, reviews, and dashboard |
+| `backend/main.py`             | FastAPI application and API routes                         |
+| `backend/rule_checker.py`     | Deterministic troubleshooting rules                        |
+| `backend/ai_engine.py`        | Gemini AI integration                                      |
+| `backend/database.py`         | SQLite database configuration                              |
+| `backend/models.py`           | Database models                                            |
+| `data/cases.csv`              | 30 predefined troubleshooting scenarios                    |
+| `data/responsible_ai_log.csv` | Stores AI recommendations and human review information     |
 
-backend/rule_checker.py
-Contains the predefined Python rules used to identify known Cisco
-troubleshooting conditions.
+---
 
-backend/ai_engine.py
-Handles the Gemini AI part of the diagnosis.
+# 🛠️ Tech Stack
 
-backend/database.py and models.py
-Set up the SQLite database and diagnostic case model.
+### Frontend
 
-data/cases.csv
-Contains the 30 Packet Tracer troubleshooting cases used by the project.
+* HTML
+* CSS
+* JavaScript
+* Chart.js
 
-data/responsible_ai_log.csv
-Keeps track of AI recommendations and human review/correction
-information.
+### Backend
 
-Technologies Used
+* Python 3.10+
+* FastAPI
+* Uvicorn
 
-Frontend: HTML, CSS, JavaScript
+### AI
 
-Backend: Python, FastAPI, Uvicorn
+* Google Gemini
 
-AI: Google Gemini
+### Database
 
-Database: SQLite, SQLAlchemy
+* SQLite
+* SQLAlchemy
 
-Rule Checking: Python Regular Expressions
+### Rule Engine
 
-Charts: Chart.js
+* Python
+* Regular Expressions
 
-Frontend Hosting: Netlify
+### Deployment
 
-Running the Project Locally
+* Netlify for the frontend
+* Python-compatible hosting for the backend
 
-Requirements
+---
 
-You will need:
+# ⚙️ Running Locally
 
-Python 3.10 or newer
+## Requirements
 
-pip
+Before running NetSage AI locally, make sure you have:
 
-A Google Gemini API key
+* **Python 3.10 or newer**
+* **pip**
+* **Google Gemini API key**
 
-1. Clone the repository
+---
 
+## 1️⃣ Clone the Repository
+
+```bash
 git clone https://github.com/YOUR_USERNAME/NetSage_AI.git
 cd NetSage_AI
+```
 
-2. Install the backend packages
+---
 
+## 2️⃣ Install Dependencies
+
+```bash
 cd backend
 pip install -r requirements.txt
+```
 
-3. Add your Gemini API key
+---
 
-Configure the API key used by ai_engine.py.
+## 3️⃣ Configure Gemini
+
+Set your Gemini API key in the AI configuration.
 
 For example:
 
-genai.configure(api_key="YOUR_GEMINI_API_KEY_HERE")
+```python
+genai.configure(
+    api_key="YOUR_GEMINI_API_KEY_HERE"
+)
+```
 
-For a real deployment, it is better to keep the key in an environment
-variable rather than committing it to GitHub.
+### 🔐 Important
 
-4. Start the backend
+For real deployments, **do not commit your API key to GitHub**.
 
+Use environment variables or another secure secret-management approach instead.
+
+---
+
+## 4️⃣ Start the Backend
+
+From the `backend` directory:
+
+```bash
 python main.py
+```
 
-The FastAPI server should be available at:
+The FastAPI server should then be available at:
 
+```text
 http://localhost:8000
+```
 
-5. Open the frontend
+---
+
+## 5️⃣ Open the Frontend
 
 Open:
 
+```text
 dashboard/index.html
+```
 
-in your browser.
+in your browser and make sure the frontend is configured to use the correct backend URL.
 
-API Endpoints
+---
 
-Method   Endpoint          Purpose
+# 🔌 API Endpoints
 
-POST   /api/diagnose   Analyze a network problem
-POST   /api/review     Save a human review
-GET    /api/stats      Get dashboard statistics
-GET    /api/cases      Get troubleshooting cases
+| Method | Endpoint        | Description                               |
+| ------ | --------------- | ----------------------------------------- |
+| `POST` | `/api/diagnose` | Analyze a network troubleshooting problem |
+| `POST` | `/api/review`   | Save a human review                       |
+| `GET`  | `/api/stats`    | Get dashboard statistics                  |
+| `GET`  | `/api/cases`    | Get predefined troubleshooting cases      |
 
-Dashboard
+---
 
-The dashboard gives a quick view of the cases handled by the system.
+# 📊 Dashboard
 
-It includes:
+The dashboard provides a simple overview of how the system is being used.
 
-Total cases
+It includes information such as:
 
-Accepted diagnoses
+```text
+Total Cases
+    │
+    ├── ✅ Accepted
+    ├── ✏️ Edited
+    └── ❌ Rejected
+```
 
-Edited diagnoses
+The case distribution chart makes it easier to see how often the AI-generated diagnosis was accepted, modified, or rejected.
 
-Rejected diagnoses
+The review information also gives insight into where the AI needed human correction.
 
-Case distribution chart
+---
 
-The review information is also useful for seeing where the AI diagnosis
-needed human correction.
+# 👨‍💻 Human Review Workflow
 
-Human Review
+One of the core ideas behind NetSage AI is **human oversight**.
 
-One of the important parts of NetSage AI is that the AI result is not
-treated as the final answer automatically.
+The system follows this workflow:
 
-After a diagnosis is generated, a reviewer can:
+```text
+AI generates diagnosis
+        ↓
+Human reviews result
+        ↓
+ ┌──────┼───────┐
+ ↓      ↓       ↓
+Accept  Edit   Reject
+ └──────┼───────┘
+        ↓
+   Save the result
+```
 
-Accept it if the diagnosis is correct.
+This means an AI-generated response is treated as a **recommendation**, not an unquestionable answer.
 
-Edit it if some part needs to be changed.
+That makes the project especially useful for experimenting with **responsible AI in technical troubleshooting**.
 
-Reject it if the diagnosis is not useful or correct.
+---
 
-The review is then recorded in the system.
+# 🧪 Troubleshooting Dataset
 
-AI suggests a diagnosis
-          ↓
-     Human checks it
-          ↓
-  Accept / Edit / Reject
-          ↓
-       Saved result
+NetSage AI currently contains **30 Cisco Packet Tracer troubleshooting scenarios**.
 
-Troubleshooting Cases
+The cases are stored in:
 
-The project currently includes 30 Cisco Packet Tracer troubleshooting
-scenarios.
-
-These cases are stored in:
-
+```text
 data/cases.csv
+```
 
-They can be used to test the diagnosis workflow and demonstrate
-different network fault conditions.
+These scenarios are used to test the complete diagnosis → review → logging workflow.
 
-Deployment
+They also provide a consistent set of examples for demonstrating how the rule engine and AI analysis work together.
+
+---
+
+# 🚀 Deployment
 
 The frontend is currently deployed on Netlify:
 
-https://netsage-ai-arnav.netlify.app/
+**https://netsage-ai-arnav.netlify.app/**
 
-The FastAPI backend can be deployed separately using a Python-compatible
-hosting service such as Render.
+The FastAPI backend can be deployed separately on a Python-compatible platform such as **Render**.
 
-When deploying the project, make sure the frontend is configured to
-communicate with the deployed backend URL.
+When deploying the application, update the frontend configuration so that API requests point to the deployed backend rather than:
 
-Why We Built It
+```text
+http://localhost:8000
+```
 
-Troubleshooting a Packet Tracer network can involve checking several
-things at once: interfaces, IP addresses, routing, VLANs, configuration
-commands, and command output.
+Also make sure your Gemini API key is stored securely on the backend.
 
-NetSage AI was built to make that process easier by putting those inputs
-into one place and providing an initial diagnosis.
+---
 
-The project also explores how AI can be used as an assistant rather
-than replacing the person making the final decision.
+# 🧭 Future Improvements
 
-Future Improvements
+NetSage AI is still an evolving project.
 
-Some possible improvements are:
+Some improvements planned for future versions include:
 
-Add more Cisco troubleshooting rules
+* More Cisco troubleshooting rules
+* Support for additional network devices
+* More `show` command types
+* Better diagnostic history
+* User authentication
+* More detailed evaluation metrics
+* Backend monitoring
+* Larger troubleshooting datasets
+* Improved AI evaluation and correction tracking
 
-Support additional network devices and command outputs
+---
 
-Improve the diagnostic history
+# 🎯 Project Goal
 
-Add authentication for multiple users
+NetSage AI was created to explore a simple question:
 
-Add more detailed evaluation metrics
+> **Can AI make network troubleshooting easier without taking the human out of the process?**
 
-Improve backend deployment and monitoring
+The project combines traditional rule-based logic with generative AI, while keeping a human reviewer in the loop.
 
-Expand the troubleshooting dataset
+That combination makes NetSage AI more than just a chatbot for networking.
 
-License
+It is an experiment in building a **practical, explainable, and human-reviewed AI troubleshooting workflow**.
 
-This project is made for educational and demonstration purposes.
+---
 
-Licensed under the MIT License.
+# 📜 License
+
+This project is created for **educational and demonstration purposes**.
+
+Licensed under the **MIT License**.
+
+---
+
+## ⭐ Support the Project
+
+If you find NetSage AI interesting, consider giving the repository a ⭐ on GitHub.
+
+```text
+Built with Python + FastAPI + Gemini + a lot of network troubleshooting.
+```
+
+**NetSage AI — Diagnose smarter. Review carefully. Troubleshoot better.**
